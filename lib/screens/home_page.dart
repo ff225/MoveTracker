@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:move_tracker/screens/settings.dart';
 
@@ -25,19 +28,38 @@ class HomePageScreen extends StatelessWidget {
         ],
       ),
       body: Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          ElevatedButton(
-            onPressed: () {},
-            child: Text('Diario'),
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          ElevatedButton(
-            onPressed: () {},
-            child: Text('Log'),
-          ),
-        ]),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: Platform.isIOS
+              ? [
+                  CupertinoButton(
+                    color: Theme.of(context).colorScheme.primary,
+                    child: const Text('Diario'),
+                    onPressed: () {},
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  CupertinoButton(
+                    color: Theme.of(context).colorScheme.primary,
+                    child: const Text('Log'),
+                    onPressed: () {},
+                  ),
+                ]
+              : [
+                  ElevatedButton(
+                    child: const Text('Diario'),
+                    onPressed: () {},
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  ElevatedButton(
+                    child: const Text('Log'),
+                    onPressed: () {},
+                  ),
+                ],
+        ),
       ),
     );
   }
