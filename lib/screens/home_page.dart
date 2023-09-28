@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:move_tracker/screens/log.dart';
 import 'package:move_tracker/screens/settings.dart';
 
 class HomePageScreen extends StatelessWidget {
@@ -11,7 +12,13 @@ class HomePageScreen extends StatelessWidget {
 
   void _moveToSettings(BuildContext ctx) => Navigator.of(ctx).push(
         MaterialPageRoute(
-          builder: (context) => SettingsScreen(),
+          builder: (context) => const SettingsScreen(),
+        ),
+      );
+
+  void _moveToLog(BuildContext ctx) => Navigator.of(ctx).push(
+        MaterialPageRoute(
+          builder: (context) => const LogScreen(),
         ),
       );
 
@@ -43,20 +50,26 @@ class HomePageScreen extends StatelessWidget {
                   CupertinoButton(
                     color: Theme.of(context).colorScheme.primary,
                     child: const Text('Log'),
-                    onPressed: () {},
+                    onPressed: () {
+                      return _moveToLog(context);
+                    },
                   ),
                 ]
               : [
                   ElevatedButton(
                     child: const Text('Diario'),
-                    onPressed: () {},
+                    onPressed: (){
+
+                    },
                   ),
                   const SizedBox(
                     height: 20,
                   ),
                   ElevatedButton(
                     child: const Text('Log'),
-                    onPressed: () {},
+                    onPressed: () {
+                      return _moveToLog(context);
+                    },
                   ),
                 ],
         ),
