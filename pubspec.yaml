@@ -37,6 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.2
   sensors_plus: ^3.0.3
   flutter_riverpod: ^2.4.1
+  flutter_reactive_ble: ^5.2.0
+  permission_handler: ^11.0.0
 
 dev_dependencies:
   flutter_test:
