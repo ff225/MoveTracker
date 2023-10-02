@@ -1,48 +1,44 @@
-import 'dart:io';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:move_tracker/providers/ble_notifier.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-class SettingsScreen extends StatelessWidget {
+import '../widgets/bluetooth_list.dart';
+
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
-  Widget _iosSettingsUI() {
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: const Text('Impostazioni'),
-        trailing: IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.refresh_outlined),
-        ),
-      ),
-      child: Center(
-        child: Text(
-          'List...',
-          style: const CupertinoTextThemeData().textStyle,
-        ),
-      ),
-    );
-  }
-
-  Widget _androidSettingsUI() {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = ref.watch(bleProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Impostazioni'),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () async {
+              Map<Permission, PermissionStatus> statuses = await [
+                Permission.bluetoothScan,
+                Permission.bluetoothConnect,
+                Permission.location
+              ].request();
+
+              if (await Permission.bluetoothScan.isGranted &&
+                  await Permission.bluetoothConnect.isGranted) {
+                print('Permission granted');
+                ref.read(bleProvider.notifier).startScan();
+              } else {
+                print('Permission not granted');
+              }
+            },
             icon: const Icon(Icons.refresh_outlined),
           ),
         ],
       ),
-      body: const Center(
-        child: Text('List...'),
-      ),
+      body: BluetoothList(provider),
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Platform.isIOS ? _iosSettingsUI() : _androidSettingsUI();
-  }
 }
+
+/*
+
+ */
