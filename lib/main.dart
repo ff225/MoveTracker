@@ -1,9 +1,47 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:move_tracker/providers/accelerometer_sensor.dart';
 import 'package:move_tracker/screens/home_page.dart';
 
-void main() {
-  runApp(ProviderScope(child: const MyApp()));
+final service = FlutterBackgroundService();
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initService();
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
+}
+
+Future<void> onStart(ServiceInstance serviceInstance) async {
+  DartPluginRegistrant.ensureInitialized();
+
+  serviceInstance.on('stopService').listen((event) {
+    serviceInstance.stopSelf();
+  });
+
+  Timer.periodic(const Duration(seconds: 10), (timer) {
+    print('Hello');
+    print(hwSensor.xAxis.length);
+    print(hwSensor.yAxis.length);
+    print(hwSensor.zAxis.length);
+    serviceInstance.stopSelf();
+  });
+  hwSensor.listen();
+}
+
+Future<void> initService() async {
+  service.configure(
+    iosConfiguration: IosConfiguration(autoStart: true),
+    androidConfiguration: AndroidConfiguration(
+        onStart: onStart, autoStartOnBoot: true, isForegroundMode: false),
+  );
 }
 
 class MyApp extends StatelessWidget {
