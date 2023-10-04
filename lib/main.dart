@@ -1,17 +1,20 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:move_tracker/providers/accelerometer_sensor.dart';
 import 'package:move_tracker/screens/home_page.dart';
-
-final service = FlutterBackgroundService();
+import 'package:move_tracker/services/accelerometer_service.dart';
+import 'package:workmanager/workmanager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initService();
+  await AccelerometerService().initService();
+  Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+  Workmanager().registerPeriodicTask(
+    'listenAccelerometer',
+    'task-listen',
+    frequency: const Duration(minutes: 15),
+  );
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -19,29 +22,23 @@ Future<void> main() async {
   );
 }
 
-Future<void> onStart(ServiceInstance serviceInstance) async {
-  DartPluginRegistrant.ensureInitialized();
+void callbackDispatcher() {
+  Workmanager().executeTask((taskName, inputData) {
+    switch (taskName) {
+      case 'task-listen':
+        AccelerometerService().service.invoke('stopService');
+        //print(hwSensor.yAxis.length);
+        print('task-listen');
+        AccelerometerService().service.startService();
+        break;
+      case 'send-value':
+        AccelerometerService().service.invoke('viewData');
+        //service.startService();
+        break;
+    }
 
-  serviceInstance.on('stopService').listen((event) {
-    serviceInstance.stopSelf();
+    return Future.value(true);
   });
-
-  Timer.periodic(const Duration(seconds: 10), (timer) {
-    print('Hello');
-    print(hwSensor.xAxis.length);
-    print(hwSensor.yAxis.length);
-    print(hwSensor.zAxis.length);
-    serviceInstance.stopSelf();
-  });
-  hwSensor.listen();
-}
-
-Future<void> initService() async {
-  service.configure(
-    iosConfiguration: IosConfiguration(autoStart: true),
-    androidConfiguration: AndroidConfiguration(
-        onStart: onStart, autoStartOnBoot: true, isForegroundMode: false),
-  );
 }
 
 class MyApp extends StatelessWidget {
