@@ -3,7 +3,7 @@ import 'dart:developer' as dev;
 
 import 'package:sensors_plus/sensors_plus.dart';
 
-final AccelerometerSensor hwSensor = AccelerometerSensor();
+//final AccelerometerSensor hwSensor = AccelerometerSensor();
 
 class AccelerometerSensor {
   late Stream<AccelerometerEvent> _stream;
@@ -37,5 +37,8 @@ class AccelerometerSensor {
 
   void cancel() async {
     await _sub.cancel();
+    _xAxis.clear();
+    _yAxis.clear();
+    _zAxis.clear();
   }
 }
