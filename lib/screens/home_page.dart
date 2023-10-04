@@ -1,9 +1,8 @@
-import 'dart:io';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:move_tracker/screens/log.dart';
 import 'package:move_tracker/screens/settings.dart';
+import 'package:move_tracker/services/accelerometer_service.dart';
+import 'package:workmanager/workmanager.dart';
 
 class HomePageScreen extends StatelessWidget {
   const HomePageScreen(this.title, {super.key});
@@ -37,41 +36,27 @@ class HomePageScreen extends StatelessWidget {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: Platform.isIOS
-              ? [
-                  CupertinoButton(
-                    color: Theme.of(context).colorScheme.primary,
-                    child: const Text('Diario'),
-                    onPressed: () {},
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  CupertinoButton(
-                    color: Theme.of(context).colorScheme.primary,
-                    child: const Text('Log'),
-                    onPressed: () {
-                      return _moveToLog(context);
-                    },
-                  ),
-                ]
-              : [
-                  ElevatedButton(
-                    child: const Text('Diario'),
-                    onPressed: (){
-
-                    },
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  ElevatedButton(
-                    child: const Text('Log'),
-                    onPressed: () {
-                      return _moveToLog(context);
-                    },
-                  ),
-                ],
+          children: [
+            ElevatedButton(
+              child: const Text('Diario'),
+              onPressed: () async {
+                if (await AccelerometerService().service.isRunning()) {
+                  Workmanager().registerOneOffTask('showData', 'send-value');
+                } else {
+                  AccelerometerService().service.startService();
+                }
+              },
+            ),
+            const SizedBox(
+              height: 20,
+            ),
+            ElevatedButton(
+              child: const Text('Log'),
+              onPressed: () {
+                return _moveToLog(context);
+              },
+            ),
+          ],
         ),
       ),
     );
