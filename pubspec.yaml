@@ -41,6 +41,8 @@ dependencies:
   permission_handler: ^11.0.0
   flutter_background_service: ^5.0.1
   workmanager: ^0.5.1
+  sqflite: ^2.3.0
+  path: ^1.8.3
   #mdsflutter: ^1.1.0
 
 dev_dependencies:
