@@ -35,6 +35,10 @@ class AccelerometerSensor {
     return _sub;
   }
 
+  void pause() async {
+    _sub.pause();
+  }
+
   void cancel() async {
     await _sub.cancel();
     _xAxis.clear();
