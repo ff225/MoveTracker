@@ -12,8 +12,12 @@ Future<void> main() async {
   Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
   Workmanager().registerPeriodicTask(
     'listenAccelerometer',
-    'task-listen',
+    'send-value',
+    initialDelay: const Duration(minutes: 5),
     frequency: const Duration(minutes: 15),
+    constraints: Constraints(
+      networkType: NetworkType.connected,
+    ),
   );
   runApp(
     const ProviderScope(
@@ -22,6 +26,7 @@ Future<void> main() async {
   );
 }
 
+@pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) {
     switch (taskName) {
@@ -33,6 +38,7 @@ void callbackDispatcher() {
         break;
       case 'send-value':
         AccelerometerService().service.invoke('viewData');
+        AccelerometerService().service.invoke('sendToCloud');
         //service.startService();
         break;
     }
