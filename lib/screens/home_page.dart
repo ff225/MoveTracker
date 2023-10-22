@@ -40,7 +40,11 @@ class HomePageScreen extends StatelessWidget {
             ElevatedButton(
               child: const Text('Diario'),
               onPressed: () async {
+                Workmanager()
+                    .registerOneOffTask('readMovesense', 'read-from-movesense');
                 if (await AccelerometerService().service.isRunning()) {
+                  print('send-value in Diario');
+
                   Workmanager().registerOneOffTask('showData', 'send-value');
                 } else {
                   AccelerometerService().service.startService();
