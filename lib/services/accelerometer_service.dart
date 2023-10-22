@@ -22,7 +22,7 @@ class AccelerometerService {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       var db = FirebaseFirestore.instance;
-      final list = await DatabaseAccelerometer.instance.getDataFromDB();
+      final list = await DatabaseMoveTracker.instance.getDataFromDB();
       print(list.length);
 
       for (final element in list) {
@@ -34,7 +34,7 @@ class AccelerometerService {
             'z': element.z,
           },
         ).whenComplete(
-          () async => await DatabaseAccelerometer.instance.updateInfo(
+          () async => await DatabaseMoveTracker.instance.updateInfo(
             element.timestamp.toIso8601String(),
           ),
         );
@@ -48,7 +48,7 @@ class AccelerometerService {
       if (hwSensor.xAxis.isNotEmpty ||
           hwSensor.yAxis.isNotEmpty ||
           hwSensor.zAxis.isNotEmpty) {
-        await DatabaseAccelerometer.instance.insert(
+        await DatabaseMoveTracker.instance.insert(
             xAxis: hwSensor.xAxis,
             yAxis: hwSensor.yAxis,
             zAxis: hwSensor.zAxis);
