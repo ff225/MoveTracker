@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as dev;
 
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -28,7 +27,7 @@ class AccelerometerSensor {
         _xAxis.add(event.x);
         _yAxis.add(event.y);
         _zAxis.add(event.z);
-        dev.log('${event.x}, ${event.y}, ${event.z}');
+        //dev.log('${event.x}, ${event.y}, ${event.z}');
       },
       cancelOnError: true,
     );
