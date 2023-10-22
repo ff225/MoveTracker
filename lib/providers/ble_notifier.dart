@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mdsflutter/Mds.dart';
 
 class BluetoothModel {
   BluetoothModel(this.id, this.name,
@@ -19,9 +21,56 @@ class BleNotifier extends StateNotifier<List<BluetoothModel>> {
   final _ble = FlutterReactiveBle();
   StreamSubscription<ConnectionStateUpdate>? _connection;
 
+  void status() async {
+    Mds.del("suunto://214530002602/Comm/Ble/Adv", "{}", (p0, p1) {
+      print(p0);
+      print(p1);
+    }, (p0, p1) {
+      print("error: $p0");
+      print("error: $p1");
+    });
+  }
+
+  void connect() async {
+    Mds.post("suunto://214530002602/Comm/Ble/Adv", "{}", (p0, p1) {
+      print(p0);
+      print(p1);
+    }, (p0, p1) {
+      print("error: $p0");
+      print("error: $p1");
+    });
+  }
+
   void startScan() {
+    /*
+    Mds.get("suunto://214530002602/Comm/Ble/Peers", "{}", (p0, p1) {
+      print(p0);
+      print(p1);
+    }, (p0, p1) {
+      print("error: $p0");
+      print("error: $p1");
+    });
+
+     */
+
     final List<BluetoothModel> discoveredDevice = [];
-    _ble.statusStream.listen((event) {
+    Mds.startScan((nameDevice, macAddr) {
+      if (discoveredDevice.isEmpty) {
+        discoveredDevice.add(BluetoothModel(macAddr!, nameDevice!));
+      }
+      for (var element in discoveredDevice) {
+        if (element.id != macAddr!) {
+          discoveredDevice.add(BluetoothModel(macAddr, nameDevice!));
+        }
+      }
+      state = discoveredDevice;
+    });
+
+    Timer(
+      const Duration(seconds: 10),
+      () => Mds.stopScan(),
+    );
+    /*_ble.statusStream.listen((event) {
       state = [];
       switch (event) {
         case BleStatus.unknown:
@@ -31,6 +80,7 @@ class BleNotifier extends StateNotifier<List<BluetoothModel>> {
         case BleStatus.ready:
           final searching =
               _ble.scanForDevices(withServices: []).listen((event) {
+            //print("${event.name}, ${event.id}");
             if (event.name != '' &&
                 discoveredDevice
                     .where((element) => element.id == event.id)
@@ -48,7 +98,7 @@ class BleNotifier extends StateNotifier<List<BluetoothModel>> {
           print(event);
       }
       ;
-    });
+    });*/
   }
 }
 
@@ -59,7 +109,12 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
   StreamSubscription<ConnectionStateUpdate>? _connection;
 
   void connectToDevice(BluetoothModel device) {
-    _connection = _ble
+    Mds.connect(device.id, (p0) {
+      print(p0);
+      device.isConnected = DeviceConnectionState.connected;
+      state = device;
+    }, () {}, () {});
+    /*_connection = _ble
         .connectToAdvertisingDevice(
       id: device.id,
       withServices: [],
@@ -67,12 +122,23 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
     )
         .listen((event) {
       print(event.connectionState.name);
+
       state = BluetoothModel(device.id, device.name,
           isConnected: event.connectionState);
+
+      if (event.connectionState == DeviceConnectionState.connected) {
+        Mds.connect(event.deviceId, (p0) {
+          print("connected");
+        }, () {}, () {});
+      }
     });
+     */
   }
 
-  void disconnectFromDevice() {
+  void disconnectFromDevice(BluetoothModel device) {
+    Mds.disconnect(device.id);
+    device.isConnected = DeviceConnectionState.disconnected;
+    state = device;
     _connection?.cancel().whenComplete(() => BluetoothModel('', ''));
   }
 }
