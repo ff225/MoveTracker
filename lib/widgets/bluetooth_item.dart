@@ -43,7 +43,7 @@ class BluetoothItem extends ConsumerWidget {
           if (status.isConnected == DeviceConnectionState.disconnected) {
             ref.read(bleConnectProvider.notifier).connectToDevice(device);
           } else {
-            ref.read(bleConnectProvider.notifier).disconnectFromDevice(/*device*/);
+            ref.read(bleConnectProvider.notifier).disconnectFromDevice(device);
           }
         },
         /*
