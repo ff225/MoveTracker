@@ -1,16 +1,14 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:ui';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:move_tracker/constants.dart';
 import 'package:move_tracker/data/database.dart';
-import 'package:move_tracker/firebase_options.dart';
 import 'package:move_tracker/providers/accelerometer_sensor.dart';
 
 class AccelerometerService {
   final service = FlutterBackgroundService();
-
 
   @pragma('vm:entry-point')
   static Future<void> onStart(ServiceInstance serviceInstance) async {
@@ -18,45 +16,34 @@ class AccelerometerService {
     final hwSensor = AccelerometerSensor();
 
     serviceInstance.on('sendToCloud').listen((event) async {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      var db = FirebaseFirestore.instance;
-      final list = await DatabaseMoveTracker.instance.getDataFromDB();
-      print(list.length);
+      // Non è necessario che sia await perché i dati sono sul db
+      log('send data from ${Constants.tableDeviceAccelerometer} to cloud');
+      DatabaseMoveTracker.instance
+          .sendToCloud(table: Constants.tableDeviceAccelerometer);
 
-      for (final element in list) {
-        await db.collection('accelerometerData').add(
-          {
-            'timestamp': element.timestamp,
-            'x': element.x,
-            'y': element.y,
-            'z': element.z,
-          },
-        ).whenComplete(
-          () async => await DatabaseMoveTracker.instance.updateInfo(
-            element.timestamp.toIso8601String(),
-          ),
-        );
-      }
-
-      hwSensor.cancel();
-      hwSensor.listen();
+      // Non sono necessari perché qui va a pescare direttamente dal db
+      //hwSensor.cancel();
+      //hwSensor.listen();
     });
 
-    serviceInstance.on('viewData').listen((event) async {
+    serviceInstance.on('saveDataToDB').listen((event) async {
+      log('service in pause');
+      hwSensor.pause();
       if (hwSensor.xAxis.isNotEmpty ||
           hwSensor.yAxis.isNotEmpty ||
           hwSensor.zAxis.isNotEmpty) {
+        log('store data to ${Constants.tableDeviceAccelerometer}...');
         await DatabaseMoveTracker.instance.insert(
-            xAxis: hwSensor.xAxis,
-            yAxis: hwSensor.yAxis,
-            zAxis: hwSensor.zAxis);
+          xAxis: hwSensor.xAxis,
+          yAxis: hwSensor.yAxis,
+          zAxis: hwSensor.zAxis,
+          table: Constants.tableDeviceAccelerometer,
+        );
       }
-      print(
-          "x_length: ${hwSensor.xAxis.length}\ny_length: ${hwSensor.yAxis.length}\nz_length: ${hwSensor.zAxis.length}");
-      hwSensor.pause();
-      print('pause');
+      log("x_length: ${hwSensor.xAxis.length}\ny_length: ${hwSensor.yAxis.length}\nz_length: ${hwSensor.zAxis.length}");
+      log('restart service');
+      hwSensor.cancel();
+      hwSensor.listen();
     });
 
     serviceInstance.on('stopService').listen((event) {
