@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import '../widgets/bluetooth_list.dart';
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.watch(bleProvider);
     return Scaffold(
@@ -20,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
         actions: [
           IconButton(
               onPressed: () async {
-                Map<Permission, PermissionStatus> statuses = await [
+                await [
                   Permission.bluetoothScan,
                   Permission.bluetoothConnect,
                   Permission.location
@@ -41,55 +43,32 @@ class SettingsScreen extends ConsumerWidget {
                 Mds.put(
                     "suunto://214530002602/Mem/DataLogger/Config/", jsonConfig,
                     (p0, p1) {
-                  print(p0);
+                  log(p0);
                 }, (p0, p1) {
-                  print("error: $p0");
+                  log("error: $p0");
                 });
-
-                /*
-                Mds.subscribe(
-                    Mds.createSubscriptionUri("214530002602", "/Meas/Acc/104"),
-                    "{}",
-                    (p0, p1) {
-                      print(p0);
-                    },
-                    (p0, p1) {},
-                    (p0) {
-                      Map<String, dynamic> accData = jsonDecode(p0);
-                      Map<String, dynamic> body = accData["Body"];
-                      List<dynamic> accArray = body["ArrayAcc"];
-                      dynamic acc = accArray.last;
-                      var _accelerometerData = "x: " +
-                          acc["x"].toStringAsFixed(2) +
-                          "\ny: " +
-                          acc["y"].toStringAsFixed(2) +
-                          "\nz: " +
-                          acc["z"].toStringAsFixed(2);
-                      print(_accelerometerData);
-                    },
-                    (p0, p1) {});*/
               },
               icon: const Icon(Icons.subscriptions)),
           IconButton(
               onPressed: () {
                 Mds.put("suunto://214530002602/Mem/DataLogger/State/",
                     '''{"newState": 3}''', (p0, p1) {
-                  print(p0);
+                  log(p0);
 
                   Workmanager().registerPeriodicTask(
-                    'saveDataOnDB',
-                    'read-from-movesense',
+                    'from-movesense-to-database',
+                    'save-movesense-data',
                     initialDelay: const Duration(minutes: 5),
                     frequency: const Duration(minutes: 15),
                   );
                 }, (p0, p1) {
-                  print("error: $p0");
+                  log("error: $p0");
                 });
               },
-              icon: Icon(Icons.real_estate_agent)),
+              icon: const Icon(Icons.real_estate_agent)),
           IconButton(
               onPressed: () async {
-                Map<Permission, PermissionStatus> statuses = await [
+                await [
                   Permission.bluetoothScan,
                   Permission.bluetoothConnect,
                   Permission.location
@@ -100,15 +79,21 @@ class SettingsScreen extends ConsumerWidget {
               icon: const Icon(Icons.bluetooth_disabled)),
           IconButton(
             onPressed: () async {
-              Map<Permission, PermissionStatus> statuses = await [
+              await [
                 Permission.bluetoothScan,
                 Permission.bluetoothConnect,
                 Permission.location
               ].request();
-              Map<String, dynamic> response = Map();
-              Workmanager().registerOneOffTask('sendToFirebase', 'send-data-acc');
+
+              Workmanager().registerOneOffTask(
+                  'save-data-device-test', 'save-device-data');
+              Workmanager().registerOneOffTask(
+                  'send-data-device-test', 'send-device-data');
+              Workmanager()
+                  .registerOneOffTask('clear-database-test', 'clear-database');
             },
             /*
+              Map<String, dynamic> response = {};
               Mds.put("suunto://214530002602/Mem/DataLogger/State/",
                   '''{"newState": 2}''', (p0, p1) {
                 print(p0);
@@ -163,7 +148,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           IconButton(
               onPressed: () async {
-                Map<Permission, PermissionStatus> statuses = await [
+                await [
                   Permission.bluetoothScan,
                   Permission.bluetoothConnect,
                   Permission.location
@@ -171,9 +156,9 @@ class SettingsScreen extends ConsumerWidget {
 
                 Mds.del("suunto://214530002602/Mem/Logbook/Entries/", "",
                     (p0, p1) {
-                  print(jsonEncode(p0));
+                  log(jsonEncode(p0));
                 }, (p0, p1) {
-                  print("error: $p0");
+                  log("error: $p0");
                 });
                 //ref.read(bleProvider.notifier).status();
               },
@@ -188,10 +173,10 @@ class SettingsScreen extends ConsumerWidget {
 
               if (await Permission.bluetoothScan.isGranted &&
                   await Permission.bluetoothConnect.isGranted) {
-                print('Permission granted');
+                log('Permission granted');
                 ref.read(bleProvider.notifier).startScan();
               } else {
-                print('Permission not granted');
+                log('Permission not granted');
               }
             },
             icon: const Icon(Icons.refresh_outlined),
