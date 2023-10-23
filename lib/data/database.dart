@@ -1,11 +1,17 @@
+import 'dart:async';
+import 'dart:developer';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:move_tracker/data/models/accelerometer_data.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart' as sql;
 
+import '../constants.dart';
+import '../firebase_options.dart';
+
 class DatabaseMoveTracker {
   static const String _databaseName = 'accelerometer.db';
-  static const String _tableName = 'accelerometer_data';
-  static const String _tableNameDevice = 'movesense_acc_data';
 
   static final DatabaseMoveTracker _database = DatabaseMoveTracker._internal();
 
@@ -21,7 +27,7 @@ class DatabaseMoveTracker {
     return await sql
         .openDatabase(path.join(await sql.getDatabasesPath(), _databaseName),
             onCreate: (db, version) async {
-      await db.execute('CREATE TABLE $_tableName ('
+      await db.execute('CREATE TABLE ${Constants.tableDeviceAccelerometer} ('
           'timestamp TEXT NOT NULL,'
           'x TEXT NOT NULL,'
           'y TEXT NOT NULL,'
@@ -29,14 +35,13 @@ class DatabaseMoveTracker {
           'isSent INTEGER NOT NULL'
           ')');
 
-      await db.execute('CREATE TABLE $_tableNameDevice ('
+      await db.execute('CREATE TABLE ${Constants.tableMovesenseAccelerometer} ('
           'timestamp TEXT NOT NULL,'
           'x TEXT NOT NULL,'
           'y TEXT NOT NULL,'
           'z TEXT NOT NULL,'
           'isSent INTEGER NOT NULL'
           ')');
-      //db.execute('CREATE TABLE $_tableNameDevice ('')');
     }, version: 1);
   }
 
@@ -44,10 +49,10 @@ class DatabaseMoveTracker {
       {required List<double> xAxis,
       required List<double> yAxis,
       required List<double> zAxis,
-      String tableName = _tableName}) async {
+      required String table}) async {
     var db = await instance.database;
     await db.insert(
-        tableName,
+        table,
         AccelerometerData(
           timestamp: DateTime.timestamp(),
           x: xAxis,
@@ -56,12 +61,11 @@ class DatabaseMoveTracker {
         ).toMap());
   }
 
-  Future<List<AccelerometerData>> getDataFromDB(
-      {String tableName = _tableName}) async {
+  Future<List<AccelerometerData>> getDataFromDB({required String table}) async {
     var db = await instance.database;
 
     final List<Map<String, dynamic>> data =
-        await db.query(tableName, where: 'isSent = ?', whereArgs: [0]);
+        await db.query(table, where: 'isSent = ?', whereArgs: [0]);
 
     return List.generate(data.length, (index) {
       return AccelerometerData(
@@ -76,11 +80,40 @@ class DatabaseMoveTracker {
     });
   }
 
-  Future<void> updateInfo(String timestamp,
-      {String tableName = _tableName}) async {
+  Future<void> updateInfo(String timestamp, {required String table}) async {
     var db = await instance.database;
 
-    await db.update(tableName, {'isSent': 1},
+    await db.update(table, {'isSent': 1},
         where: 'timestamp = ?', whereArgs: [timestamp]);
+  }
+
+  Future<void> deleteData({required String table}) async {
+    var db = await instance.database;
+
+    await db.delete(table, where: 'isSent = ?', whereArgs: [1]);
+  }
+
+  Future<void> sendToCloud({required String table}) async {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    var db = FirebaseFirestore.instance;
+    final list = await DatabaseMoveTracker.instance.getDataFromDB(table: table);
+    log('list length: ${list.length}');
+
+    for (final element in list) {
+      await db.collection(table).doc(element.timestamp.toIso8601String()).set(
+        {
+          'x': element.x,
+          'y': element.y,
+          'z': element.z,
+        },
+      ).whenComplete(
+        () async => await DatabaseMoveTracker.instance.updateInfo(
+          element.timestamp.toIso8601String(),
+          table: table,
+        ),
+      );
+    }
   }
 }
