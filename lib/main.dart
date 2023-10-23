@@ -156,31 +156,6 @@ void callbackDispatcher() {
         case 'send-movesense-data':
           DatabaseMoveTracker.instance
               .sendToCloud(table: Constants.tableMovesenseAccelerometer);
-          /*await Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform,
-          );
-          var db = FirebaseFirestore.instance;
-          final list = await DatabaseMoveTracker.instance
-              .getDataFromDB(tableName: "movesense_acc_data");
-          print(list.length);
-
-          for (final element in list) {
-            await db
-                .collection('accelerometerDataMovesense')
-                .doc(element.timestamp.toIso8601String())
-                .set(
-              {
-                'x': element.x,
-                'y': element.y,
-                'z': element.z,
-              },
-            ).whenComplete(
-              () async => await DatabaseMoveTracker.instance.updateInfo(
-                tableName: "movesense_acc_data",
-                element.timestamp.toIso8601String(),
-              ),
-            );
-          }*/
           break;
         case 'clear-database':
           await DatabaseMoveTracker.instance
