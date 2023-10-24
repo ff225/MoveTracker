@@ -39,13 +39,14 @@ dependencies:
   flutter_riverpod: ^2.4.1
   flutter_reactive_ble: ^5.2.0
   permission_handler: ^11.0.0
-  flutter_background_service: ^5.0.1
   workmanager: ^0.5.1
   sqflite: ^2.3.0
   path: ^1.8.3
-  firebase_core: ^2.17.0
-  cloud_firestore: ^4.9.3
-  mdsflutter: ^2.0.0-beta2
+  firebase_core: ^2.19.0
+  cloud_firestore:
+    path: packages/cloud_firestore-4.11.0
+  mdsflutter: ^2.0.0-beta3
+  flutter_background_service: 5.0.1
 
 dev_dependencies:
   flutter_test:
