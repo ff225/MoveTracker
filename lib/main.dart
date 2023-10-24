@@ -117,8 +117,8 @@ void callbackDispatcher() {
           var entryId = await MdsAsync.get(
               "suunto://214530002602/Mem/Logbook/Entries/", "");
 
-          log("id: ${entryId['Content']['elements'][0]['Id']}");
-          var id = entryId['Content']['elements'][0]['Id'];
+          log("id: ${entryId['elements'][0]['Id']}");
+          var id = entryId['elements'][0]['Id'];
           var values = await MdsAsync.get(
               "suunto://MDS/Logbook/214530002602/byId/$id/Data", "");
           List<double> xValues = [];
@@ -136,7 +136,7 @@ void callbackDispatcher() {
           log("x: ${xValues.length},y: ${yValues.length},z: ${zValues.length} ");
 
           // Store values on db
-          log("store in db...");
+          log('store data to ${Constants.tableMovesenseAccelerometer}...');
           await DatabaseMoveTracker.instance.insert(
               xAxis: xValues,
               yAxis: yValues,
@@ -154,7 +154,7 @@ void callbackDispatcher() {
               '''{"newState": 3}''');
           break;
         case 'send-movesense-data':
-          DatabaseMoveTracker.instance
+          await DatabaseMoveTracker.instance
               .sendToCloud(table: Constants.tableMovesenseAccelerometer);
           break;
         case 'clear-database':
