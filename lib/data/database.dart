@@ -99,7 +99,7 @@ class DatabaseMoveTracker {
     );
     var db = FirebaseFirestore.instance;
     final list = await DatabaseMoveTracker.instance.getDataFromDB(table: table);
-    log('list length: ${list.length}');
+    log('$table, list length: ${list.length}');
 
     for (final element in list) {
       await db.collection(table).doc(element.timestamp.toIso8601String()).set(
