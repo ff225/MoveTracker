@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mdsflutter/Mds.dart';
 import 'package:move_tracker/providers/ble_notifier.dart';
+import 'package:move_tracker/providers/movesense.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:workmanager/workmanager.dart';
 
 import '../widgets/bluetooth_list.dart';
 
@@ -27,7 +27,7 @@ class SettingsScreen extends ConsumerWidget {
                   Permission.bluetoothConnect,
                   Permission.location
                 ].request();
-
+/*
                 var jsonConfig = '''{
                             "config": {
                                 "dataEntries": {
@@ -46,11 +46,14 @@ class SettingsScreen extends ConsumerWidget {
                   log(p0);
                 }, (p0, p1) {
                   log("error: $p0");
-                });
+                });*/
+                Movesense().configLogger();
               },
               icon: const Icon(Icons.subscriptions)),
           IconButton(
-              onPressed: () {
+              onPressed: () async {
+                await Movesense().saveDataToDatabase();
+                /*
                 Mds.put("suunto://214530002602/Mem/DataLogger/State/",
                     '''{"newState": 3}''', (p0, p1) {
                   log(p0);
@@ -64,6 +67,7 @@ class SettingsScreen extends ConsumerWidget {
                 }, (p0, p1) {
                   log("error: $p0");
                 });
+                 */
               },
               icon: const Icon(Icons.real_estate_agent)),
           IconButton(
@@ -85,12 +89,13 @@ class SettingsScreen extends ConsumerWidget {
                 Permission.location
               ].request();
 
+              /*
               Workmanager().registerOneOffTask(
                   'save-data-device-test', 'save-device-data');
               Workmanager().registerOneOffTask(
                   'send-data-device-test', 'send-device-data');
               Workmanager()
-                  .registerOneOffTask('clear-database-test', 'clear-database');
+                  .registerOneOffTask('clear-database-test', 'clear-database');*/
             },
             /*
               Map<String, dynamic> response = {};

@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mdsflutter/Mds.dart';
 import 'package:move_tracker/constants.dart';
 import 'package:move_tracker/data/database.dart';
+import 'package:move_tracker/providers/movesense.dart';
 import 'package:move_tracker/screens/home_page.dart';
 import 'package:move_tracker/services/accelerometer_service.dart';
 import 'package:workmanager/workmanager.dart';
@@ -50,7 +49,6 @@ Future<void> main() async {
     initialDelay: const Duration(minutes: 5),
     frequency: const Duration(minutes: 15),
   );
-
   Workmanager().registerPeriodicTask(
     'clear-database',
     'clear-database',
@@ -109,18 +107,20 @@ void callbackDispatcher() {
           AccelerometerService().service.invoke('sendToCloud');
           break;
         case 'save-movesense-data':
+          await Movesense().saveDataToDatabase();
+          /*
           //Stop logging
-          await MdsAsync.put("suunto://214530002602/Mem/DataLogger/State/",
+          await MdsAsync.put("suunto://214530002554/Mem/DataLogger/State/",
               '''{"newState": 2}''');
 
           // Get entry id
           var entryId = await MdsAsync.get(
-              "suunto://214530002602/Mem/Logbook/Entries/", "");
+              "suunto://214530002554/Mem/Logbook/Entries/", "");
 
           log("id: ${entryId['elements'][0]['Id']}");
           var id = entryId['elements'][0]['Id'];
           var values = await MdsAsync.get(
-              "suunto://MDS/Logbook/214530002602/byId/$id/Data", "");
+              "suunto://MDS/Logbook/214530002554/byId/$id/Data", "");
           List<double> xValues = [];
           List<double> yValues = [];
           List<double> zValues = [];
@@ -145,13 +145,15 @@ void callbackDispatcher() {
 
           // Delete entry
           await MdsAsync.del(
-            "suunto://214530002602/Mem/Logbook/Entries/",
+            "suunto://214530002554/Mem/Logbook/Entries/",
             "",
           );
 
           // Restart Logging
-          await MdsAsync.put("suunto://214530002602/Mem/DataLogger/State/",
+          await MdsAsync.put("suunto://214530002554/Mem/DataLogger/State/",
               '''{"newState": 3}''');
+
+           */
           break;
         case 'send-movesense-data':
           await DatabaseMoveTracker.instance
