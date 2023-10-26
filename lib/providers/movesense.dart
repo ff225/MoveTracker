@@ -8,10 +8,10 @@ import 'package:workmanager/workmanager.dart';
 class Movesense {
   // TODO potrei tornare un'informazione per gestire il caso in cui ci siano errori in fase di configurazione.
   Future<void> configLogger({int hz = 13}) async {
-    // TODO add db call to get info about wearable id
+    var serialId = await DatabaseMoveTracker.instance.getSerialId();
 
     var state = await MdsAsync.get(
-            Mds.createRequestUri('214530002554', '/Mem/DataLogger/State'), '')
+            Mds.createRequestUri(serialId, '/Mem/DataLogger/State'), '')
         .then((state) => state.toString(), onError: (error, _) {
       MdsError status = error as MdsError;
       log('error: ${status.error}');
@@ -33,9 +33,9 @@ class Movesense {
                                 }
                             }
                         }''';
-    // TODO remove hardcoded serial
+
     var response = await MdsAsync.put(
-            Mds.createRequestUri('214530002554', '/Mem/DataLogger/Config/'),
+            Mds.createRequestUri(serialId, '/Mem/DataLogger/Config/'),
             jsonConfig)
         .then<String>((_) => setLogState(state: 3), onError: (error, _) {
       MdsError status = error as MdsError;
@@ -55,13 +55,13 @@ class Movesense {
     }
   }
 
-  Future<String> setLogState({required int state}) {
-    // TODO add db call to get info about wearable id
+  Future<String> setLogState({required int state}) async {
+    var serialId = await DatabaseMoveTracker.instance.getSerialId();
 
     var jsonConfig = '''{"newState": $state}''';
 
     return MdsAsync.put(
-            Mds.createRequestUri('214530002554', '/Mem/DataLogger/State/'),
+            Mds.createRequestUri(serialId, '/Mem/DataLogger/State/'),
             jsonConfig)
         .then<String>((_) => 'newState: $state', onError: (error, _) {
       MdsError status = error as MdsError;
@@ -71,10 +71,10 @@ class Movesense {
   }
 
   Future<void> saveDataToDatabase() async {
-    // TODO add db call to get info about wearable id
+    var serialId = await DatabaseMoveTracker.instance.getSerialId();
 
     var state = await MdsAsync.get(
-            Mds.createRequestUri('214530002554', '/Mem/DataLogger/State'), '')
+            Mds.createRequestUri(serialId, '/Mem/DataLogger/State'), '')
         .then((state) => state.toString(), onError: (error, _) {
       MdsError status = error as MdsError;
       log('error: ${status.error}');
@@ -88,7 +88,7 @@ class Movesense {
 
     // Get id
     var id = await MdsAsync.get(
-            Mds.createRequestUri('214530002554', '/Mem/Logbook/Entries/'), '')
+            Mds.createRequestUri(serialId, '/Mem/Logbook/Entries/'), '')
         .then((id) => id['elements'][0]['Id'].toString(), onError: (error, _) {
       MdsError status = error as MdsError;
       log('error: ${status.error}');
@@ -106,8 +106,7 @@ class Movesense {
 
     // Store value in x, y, z list else 'error'
     var values = await MdsAsync.get(
-            Mds.createRequestUri('MDS/Logbook/214530002554', '/byId/$id/Data'),
-            '')
+            Mds.createRequestUri('MDS/Logbook/$serialId', '/byId/$id/Data'), '')
         .then((values) {
       for (var accData in values['Meas']['Acc']) {
         for (var value in accData['ArrayAcc']) {
@@ -143,7 +142,7 @@ class Movesense {
 
     // Store values on db
     log('store data to ${Constants.tableMovesenseAccelerometer}...');
-    await DatabaseMoveTracker.instance.insert(
+    await DatabaseMoveTracker.instance.insertAccelerometerData(
         xAxis: xValues,
         yAxis: yValues,
         zAxis: zValues,
@@ -152,7 +151,7 @@ class Movesense {
     // Delete entry
     log('delete entry... ');
     await MdsAsync.del(
-      Mds.createRequestUri('214530002554', '/Mem/Logbook/Entries/'),
+      Mds.createRequestUri(serialId, '/Mem/Logbook/Entries/'),
       //"suunto://214530002554/Mem/Logbook/Entries/",
       "",
     );
