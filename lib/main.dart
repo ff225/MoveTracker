@@ -14,16 +14,6 @@ Future<void> main() async {
 
   await AccelerometerService().initService();
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
-  Workmanager().registerPeriodicTask(
-    'from-movesense-to-cloud',
-    'send-movesense-data',
-    existingWorkPolicy: ExistingWorkPolicy.append,
-    constraints: Constraints(
-      networkType: NetworkType.connected,
-    ),
-    initialDelay: const Duration(minutes: 10),
-    frequency: const Duration(minutes: 15),
-  );
 
   Workmanager().registerPeriodicTask(
     'from-device-to-cloud',
