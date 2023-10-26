@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:move_tracker/data/models/accelerometer_data.dart';
+import 'package:move_tracker/providers/ble_notifier.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart' as sql;
 
@@ -32,7 +33,7 @@ class DatabaseMoveTracker {
           'x TEXT NOT NULL,'
           'y TEXT NOT NULL,'
           'z TEXT NOT NULL,'
-          'isSent INTEGER NOT NULL'
+          'is_sent INTEGER NOT NULL'
           ')');
 
       await db.execute('CREATE TABLE ${Constants.tableMovesenseAccelerometer} ('
@@ -40,12 +41,19 @@ class DatabaseMoveTracker {
           'x TEXT NOT NULL,'
           'y TEXT NOT NULL,'
           'z TEXT NOT NULL,'
-          'isSent INTEGER NOT NULL'
+          'is_sent INTEGER NOT NULL'
+          ')');
+
+      await db.execute('CREATE TABLE ${Constants.tableMovesenseInfo} ('
+          'mac_address TEXT NOT NULL,'
+          'serial_id TEXT NOT NULL,'
+          'hz_logging INTEGER DEFAULT 13 NOT NULL'
           ')');
     }, version: 1);
   }
 
-  Future<void> insert(
+  // Operation on Accelerometer Data
+  Future<void> insertAccelerometerData(
       {required List<double> xAxis,
       required List<double> yAxis,
       required List<double> zAxis,
@@ -65,7 +73,7 @@ class DatabaseMoveTracker {
     var db = await instance.database;
 
     final List<Map<String, dynamic>> data =
-        await db.query(table, where: 'isSent = ?', whereArgs: [0]);
+        await db.query(table, where: 'is_sent = ?', whereArgs: [0]);
 
     return List.generate(data.length, (index) {
       return AccelerometerData(
@@ -80,17 +88,18 @@ class DatabaseMoveTracker {
     });
   }
 
-  Future<void> updateInfo(String timestamp, {required String table}) async {
+  Future<void> updateAccelerometerInfo(String timestamp,
+      {required String table}) async {
     var db = await instance.database;
 
-    await db.update(table, {'isSent': 1},
+    await db.update(table, {'is_sent': 1},
         where: 'timestamp = ?', whereArgs: [timestamp]);
   }
 
-  Future<void> deleteData({required String table}) async {
+  Future<void> deleteAccelerometerTable({required String table}) async {
     var db = await instance.database;
 
-    await db.delete(table, where: 'isSent = ?', whereArgs: [1]);
+    await db.delete(table, where: 'is_sent = ?', whereArgs: [1]);
   }
 
   Future<void> sendToCloud({required String table}) async {
@@ -109,11 +118,37 @@ class DatabaseMoveTracker {
           'z': element.z,
         },
       ).whenComplete(
-        () async => await DatabaseMoveTracker.instance.updateInfo(
+        () async => await DatabaseMoveTracker.instance.updateAccelerometerInfo(
           element.timestamp.toIso8601String(),
           table: table,
         ),
       );
     }
+  }
+
+  // Operation on Movesense
+
+  Future<void> insertMovesenseInfo(BluetoothModel device) async {
+    var db = await instance.database;
+
+    log('store info about movesense...');
+    db.insert(Constants.tableMovesenseInfo,
+        {'mac_address': device.macAddress, 'serial_id': device.serialId});
+  }
+
+  Future<String> getMacAddress() async {
+    var db = await instance.database;
+
+    var result =
+        await db.query(Constants.tableMovesenseInfo, columns: ['mac_address']);
+    return result[0]['mac_address'].toString();
+  }
+
+  Future<void> deleteMovesenseInfo(BluetoothModel device) async {
+    var db = await instance.database;
+
+    log('delete info about movesense...');
+    await db.delete(Constants.tableMovesenseInfo,
+        where: 'serial_id = ?', whereArgs: [device.serialId]);
   }
 }
