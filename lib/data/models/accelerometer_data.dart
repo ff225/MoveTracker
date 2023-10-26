@@ -19,7 +19,7 @@ class AccelerometerData {
       'x': x.map((x) => x).join(", "),
       'y': y.map((y) => y).join(", "),
       'z': z.map((z) => z).join(", "),
-      'isSent': isSent,
+      'is_sent': isSent,
     };
   }
 }

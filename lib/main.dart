@@ -14,7 +14,6 @@ Future<void> main() async {
 
   await AccelerometerService().initService();
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
-  // TODO hardcoded movesense serial
   Workmanager().registerPeriodicTask(
     'from-movesense-to-cloud',
     'send-movesense-data',
@@ -160,10 +159,10 @@ void callbackDispatcher() {
               .sendToCloud(table: Constants.tableMovesenseAccelerometer);
           break;
         case 'clear-database':
-          await DatabaseMoveTracker.instance
-              .deleteAccelerometerTable(table: Constants.tableDeviceAccelerometer);
-          await DatabaseMoveTracker.instance
-              .deleteAccelerometerTable(table: Constants.tableMovesenseAccelerometer);
+          await DatabaseMoveTracker.instance.deleteAccelerometerTable(
+              table: Constants.tableDeviceAccelerometer);
+          await DatabaseMoveTracker.instance.deleteAccelerometerTable(
+              table: Constants.tableMovesenseAccelerometer);
           break;
       }
       return Future.value(true);
