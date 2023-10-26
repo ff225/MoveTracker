@@ -144,6 +144,14 @@ class DatabaseMoveTracker {
     return result[0]['mac_address'].toString();
   }
 
+  Future<String> getSerialId() async {
+    var db = await instance.database;
+
+    var result =
+    await db.query(Constants.tableMovesenseInfo, columns: ['serial_id']);
+    return result[0]['serial_id'].toString();
+  }
+
   Future<void> deleteMovesenseInfo(BluetoothModel device) async {
     var db = await instance.database;
 
