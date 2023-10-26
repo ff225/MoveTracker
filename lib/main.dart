@@ -161,9 +161,9 @@ void callbackDispatcher() {
           break;
         case 'clear-database':
           await DatabaseMoveTracker.instance
-              .deleteData(table: Constants.tableDeviceAccelerometer);
+              .deleteAccelerometerTable(table: Constants.tableDeviceAccelerometer);
           await DatabaseMoveTracker.instance
-              .deleteData(table: Constants.tableMovesenseAccelerometer);
+              .deleteAccelerometerTable(table: Constants.tableMovesenseAccelerometer);
           break;
       }
       return Future.value(true);

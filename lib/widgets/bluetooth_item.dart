@@ -13,13 +13,13 @@ class BluetoothItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(bleConnectProvider);
     return ListTile(
-      title: Text(device.id),
-      subtitle: Text(device.name),
+      title: Text(device.macAddress),
+      subtitle: Text(device.serialId),
       onTap: () {
-        if (device.name != status.name) {
+        if (device.serialId != status.serialId) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Devi prima connetterti a: ${device.name}'),
+              content: Text('Devi prima connetterti a: ${device.serialId}'),
             ),
           );
         } /* else {
@@ -53,7 +53,7 @@ class BluetoothItem extends ConsumerWidget {
         icon: Icon(status.isConnected == DeviceConnectionState.disconnected
             ? Icons.bluetooth
             : Icons.bluetooth_connected),
-        label: Text(status.id == device.id
+        label: Text(status.macAddress == device.macAddress
             ? status.isConnected.name
             : DeviceConnectionState.disconnected.name),
       ),

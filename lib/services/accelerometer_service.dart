@@ -33,7 +33,7 @@ class AccelerometerService {
           hwSensor.yAxis.isNotEmpty ||
           hwSensor.zAxis.isNotEmpty) {
         log('store data to ${Constants.tableDeviceAccelerometer}...');
-        await DatabaseMoveTracker.instance.insert(
+        await DatabaseMoveTracker.instance.insertAccelerometerData(
           xAxis: hwSensor.xAxis,
           yAxis: hwSensor.yAxis,
           zAxis: hwSensor.zAxis,
