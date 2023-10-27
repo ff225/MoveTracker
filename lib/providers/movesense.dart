@@ -176,7 +176,7 @@ class Movesense {
       log('store data to ${Constants.tableMovesenseAccelerometer}...');
       await DatabaseMoveTracker.instance.insertAccelerometerData(
           timestamp: DateTime.fromMillisecondsSinceEpoch(
-              element['ModificationTimestamp'] * 1000),
+              element['ModificationTimestamp'] * 1000).toUtc(),
           xAxis: xValues,
           yAxis: yValues,
           zAxis: zValues,

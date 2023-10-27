@@ -34,7 +34,7 @@ class AccelerometerService {
           hwSensor.zAxis.isNotEmpty) {
         log('store data to ${Constants.tableDeviceAccelerometer}...');
         await DatabaseMoveTracker.instance.insertAccelerometerData(
-          timestamp: DateTime.timestamp().toLocal(),
+          timestamp: DateTime.timestamp().toUtc(),
           xAxis: hwSensor.xAxis,
           yAxis: hwSensor.yAxis,
           zAxis: hwSensor.zAxis,
