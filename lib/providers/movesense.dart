@@ -6,17 +6,25 @@ import 'package:move_tracker/data/database.dart';
 import 'package:workmanager/workmanager.dart';
 
 class Movesense {
+  Future<void> setTime() async {
+    var serialId = await DatabaseMoveTracker.instance.getSerialId();
+
+    MdsAsync.put(Mds.createRequestUri(serialId, '/Time/'),
+        '''{"value": ${DateTime.timestamp().microsecond}}''');
+  }
+
   // TODO potrei tornare un'informazione per gestire il caso in cui ci siano errori in fase di configurazione.
   Future<void> configLogger({int hz = 13}) async {
     var serialId = await DatabaseMoveTracker.instance.getSerialId();
 
-    var state = await MdsAsync.get(
-            Mds.createRequestUri(serialId, '/Mem/DataLogger/State'), '')
-        .then((state) => state.toString(), onError: (error, _) {
-      MdsError status = error as MdsError;
-      log('error: ${status.error}');
-      return 'error: ${status.status}';
-    });
+    // alla prima connessione/riconnessione è necessario fare il flush della memoria
+    await saveDataToDatabase();
+
+    await setTime();
+
+    var state = await getLogState();
+
+    log('state is: $state');
 
     if (state.contains('error')) return;
 
@@ -66,6 +74,18 @@ class Movesense {
     }
   }
 
+  Future<String> getLogState() async {
+    var serialId = await DatabaseMoveTracker.instance.getSerialId();
+
+    return MdsAsync.get(
+            Mds.createRequestUri(serialId, '/Mem/DataLogger/State'), '')
+        .then((state) => state.toString(), onError: (error, _) {
+      MdsError status = error as MdsError;
+      log('error: ${status.error}');
+      return 'error: ${status.status}';
+    });
+  }
+
   Future<String> setLogState({required int state}) async {
     var serialId = await DatabaseMoveTracker.instance.getSerialId();
 
@@ -84,13 +104,7 @@ class Movesense {
   Future<void> saveDataToDatabase() async {
     var serialId = await DatabaseMoveTracker.instance.getSerialId();
 
-    var state = await MdsAsync.get(
-            Mds.createRequestUri(serialId, '/Mem/DataLogger/State'), '')
-        .then((state) => state.toString(), onError: (error, _) {
-      MdsError status = error as MdsError;
-      log('error: ${status.error}');
-      return 'error: ${status.status}';
-    });
+    var state = await getLogState();
 
     if (state.contains('error')) return;
 
@@ -98,45 +112,52 @@ class Movesense {
     state.contains('3') ? await setLogState(state: 2) : null;
 
     // Get id
-    var id = await MdsAsync.get(
+    var elements = await MdsAsync.get(
             Mds.createRequestUri(serialId, '/Mem/Logbook/Entries/'), '')
-        .then((id) => id['elements'][0]['Id'].toString(), onError: (error, _) {
+        .then((id) => id['elements'] /*[0]['Id'].toString()*/,
+            onError: (error, _) {
       MdsError status = error as MdsError;
       log('error: ${status.error}');
       return 'error: ${status.status}';
     });
 
-    if (id.contains('error')) return;
+    if (elements.contains('error')) return;
 
-    log("id: $id");
-    //var id = entryId['elements'][0]['Id'];
+    for (var element in elements) {
+      log(element.toString());
+      var idEntry = element['Id'];
+      //log("id: $id");
+      //var id = entryId['elements'][0]['Id'];
 
-    List<double> xValues = [];
-    List<double> yValues = [];
-    List<double> zValues = [];
+      List<double> xValues = [];
+      List<double> yValues = [];
+      List<double> zValues = [];
 
-    // Store value in x, y, z list else 'error'
-    var values = await MdsAsync.get(
-            Mds.createRequestUri('MDS/Logbook/$serialId', '/byId/$id/Data'), '')
-        .then((values) {
-      for (var accData in values['Meas']['Acc']) {
-        for (var value in accData['ArrayAcc']) {
-          log("x: ${double.parse(value['x'].toString())}, y: ${value['y']}, z: ${value['z']}");
+      // Store value in x, y, z list else 'error'
+      var values = await MdsAsync.get(
+              Mds.createRequestUri(
+                  'MDS/Logbook/$serialId', '/byId/$idEntry/Data'),
+              '')
+          .then((values) {
+        for (var accData in values['Meas']['Acc']) {
+          for (var value in accData['ArrayAcc']) {
+            log("x: ${double.parse(value['x'].toString())}, y: ${value['y']}, z: ${value['z']}");
 
-          xValues.add(double.parse(value['x'].toString()));
-          yValues.add(double.parse(value['y'].toString()));
-          zValues.add(double.parse(value['z'].toString()));
+            xValues.add(double.parse(value['x'].toString()));
+            yValues.add(double.parse(value['y'].toString()));
+            zValues.add(double.parse(value['z'].toString()));
+          }
         }
-      }
-      return 'done';
-    }, onError: (error, _) {
-      MdsError status = error as MdsError;
-      log('error: ${status.error}');
-      return 'error: ${status.status}';
-    });
+        return 'done';
+      }, onError: (error, _) {
+        MdsError status = error as MdsError;
+        log('error: ${status.error}');
+        return 'error: ${status.status}';
+      });
 
-    if (values.contains('error')) return;
-    //"suunto://MDS/Logbook/214530002554/byId/$id/Data", "");
+      if (values.contains('error')) return;
+
+      //"suunto://MDS/Logbook/214530002554/byId/$id/Data", "");
 /*
     for (var accData in values['Meas']['Acc']) {
       for (var value in accData['ArrayAcc']) {
@@ -149,18 +170,21 @@ class Movesense {
     }
 
  */
-    log("x: ${xValues.length},y: ${yValues.length},z: ${zValues.length} ");
+      log("x: ${xValues.length},y: ${yValues.length},z: ${zValues.length} ");
 
-    // Store values on db
-    log('store data to ${Constants.tableMovesenseAccelerometer}...');
-    await DatabaseMoveTracker.instance.insertAccelerometerData(
-        xAxis: xValues,
-        yAxis: yValues,
-        zAxis: zValues,
-        table: Constants.tableMovesenseAccelerometer);
+      // Store values on db
+      log('store data to ${Constants.tableMovesenseAccelerometer}...');
+      await DatabaseMoveTracker.instance.insertAccelerometerData(
+          timestamp: DateTime.fromMillisecondsSinceEpoch(
+              element['ModificationTimestamp'] * 1000),
+          xAxis: xValues,
+          yAxis: yValues,
+          zAxis: zValues,
+          table: Constants.tableMovesenseAccelerometer);
+    }
 
     // Delete entry
-    log('delete entry... ');
+    log('delete entries... ');
     await MdsAsync.del(
       Mds.createRequestUri(serialId, '/Mem/Logbook/Entries/'),
       //"suunto://214530002554/Mem/Logbook/Entries/",
