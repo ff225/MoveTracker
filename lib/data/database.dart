@@ -47,14 +47,16 @@ class DatabaseMoveTracker {
       await db.execute('CREATE TABLE ${Constants.tableMovesenseInfo} ('
           'mac_address TEXT NOT NULL,'
           'serial_id TEXT NOT NULL,'
-          'hz_logging INTEGER DEFAULT 13 NOT NULL'
+          'hz_logging INTEGER DEFAULT 13 NOT NULL,'
+          'status TEXT NOT NULL'
           ')');
     }, version: 1);
   }
 
   // Operation on Accelerometer Data
   Future<void> insertAccelerometerData(
-      {required List<double> xAxis,
+      {required DateTime timestamp,
+      required List<double> xAxis,
       required List<double> yAxis,
       required List<double> zAxis,
       required String table}) async {
@@ -62,7 +64,7 @@ class DatabaseMoveTracker {
     await db.insert(
         table,
         AccelerometerData(
-          timestamp: DateTime.timestamp(),
+          timestamp: timestamp,
           x: xAxis,
           y: yAxis,
           z: zAxis,
@@ -131,9 +133,44 @@ class DatabaseMoveTracker {
   Future<void> insertMovesenseInfo(BluetoothModel device) async {
     var db = await instance.database;
 
+    var checkInfo = await db.query(Constants.tableMovesenseInfo,
+        columns: ['mac_address'],
+        where: 'mac_address = ?',
+        whereArgs: [device.macAddress]);
+
+    /*
+    Casi da considerare:
+    - Disconnessione dello stesso dispositivo -> non necessario scrivere sul db
+    - Disconnessione dispositivo e connessione di un altro dispositivo -> necessario cancellare e riscrivere
+     */
+
+    if (checkInfo.isNotEmpty) {
+      await updateConnectionStatus(device);
+      return;
+    }
+
+    await db.delete(Constants.tableMovesenseInfo);
+
     log('store info about movesense...');
-    db.insert(Constants.tableMovesenseInfo,
-        {'mac_address': device.macAddress, 'serial_id': device.serialId});
+    db.insert(
+      Constants.tableMovesenseInfo,
+      {
+        'mac_address': device.macAddress,
+        'serial_id': device.serialId,
+        'status': device.isConnected.name
+      },
+    );
+  }
+
+  Future<void> updateConnectionStatus(BluetoothModel device) async {
+    var db = await instance.database;
+
+    db.update(
+      Constants.tableMovesenseInfo,
+      {'status': device.isConnected.name},
+      where: 'mac_address = ?',
+      whereArgs: [device.macAddress],
+    );
   }
 
   Future<String> getMacAddress() async {
@@ -148,7 +185,7 @@ class DatabaseMoveTracker {
     var db = await instance.database;
 
     var result =
-    await db.query(Constants.tableMovesenseInfo, columns: ['serial_id']);
+        await db.query(Constants.tableMovesenseInfo, columns: ['serial_id']);
     return result[0]['serial_id'].toString();
   }
 
