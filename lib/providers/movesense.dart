@@ -8,9 +8,9 @@ import 'package:workmanager/workmanager.dart';
 class Movesense {
   Future<void> setTime() async {
     var serialId = await DatabaseMoveTracker.instance.getSerialId();
-
+    log(DateTime.timestamp().toUtc().microsecondsSinceEpoch.toString());
     MdsAsync.put(Mds.createRequestUri(serialId, '/Time/'),
-        '''{"value": ${DateTime.timestamp().microsecond}}''');
+        '''{"value": ${DateTime.timestamp().toUtc().microsecondsSinceEpoch}}''');
   }
 
   // TODO potrei tornare un'informazione per gestire il caso in cui ci siano errori in fase di configurazione.
@@ -176,7 +176,8 @@ class Movesense {
       log('store data to ${Constants.tableMovesenseAccelerometer}...');
       await DatabaseMoveTracker.instance.insertAccelerometerData(
           timestamp: DateTime.fromMillisecondsSinceEpoch(
-              element['ModificationTimestamp'] * 1000).toUtc(),
+                  element['ModificationTimestamp'] * 1000)
+              .toUtc(),
           xAxis: xValues,
           yAxis: yValues,
           zAxis: zValues,
