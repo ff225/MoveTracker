@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -97,10 +98,6 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
 
     await Movesense().setLogState(state: 2);
 
-    forgetDevice
-        ? await DatabaseMoveTracker.instance.deleteMovesenseInfo(device)
-        : null;
-
     Mds.disconnect(device.macAddress);
 
     // Delete worker
@@ -109,11 +106,17 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
     await Workmanager().cancelByUniqueName('from-movesense-to-cloud');
 
     device.isConnected = DeviceConnectionState.disconnected;
+    forgetDevice
+        ? await DatabaseMoveTracker.instance.deleteMovesenseInfo(device)
+        : await DatabaseMoveTracker.instance.updateConnectionStatus(device);
 
-    await DatabaseMoveTracker.instance.updateConnectionStatus(device);
-
-    state = device;
+    log('forgetDevice? $forgetDevice');
+    state = forgetDevice ? BluetoothModel('', '') : device;
     //_connection?.cancel().whenComplete(() => BluetoothModel('', ''));
+  }
+
+  Future<void> config() async {
+    state = await DatabaseMoveTracker.instance.getDevice();
   }
 }
 
