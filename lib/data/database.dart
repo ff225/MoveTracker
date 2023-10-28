@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:move_tracker/data/models/accelerometer_data.dart';
 import 'package:move_tracker/providers/ble_notifier.dart';
 import 'package:path/path.dart' as path;
@@ -162,6 +163,7 @@ class DatabaseMoveTracker {
     );
   }
 
+  // TODO riutilizzabile per cambiare frequenza logging
   Future<void> updateConnectionStatus(BluetoothModel device) async {
     var db = await instance.database;
 
@@ -171,6 +173,19 @@ class DatabaseMoveTracker {
       where: 'mac_address = ?',
       whereArgs: [device.macAddress],
     );
+  }
+
+  Future<BluetoothModel> getDevice() async {
+    var db = await instance.database;
+    var device = await db.query(Constants.tableMovesenseInfo);
+
+    return device.isEmpty
+        ? BluetoothModel('', '')
+        : BluetoothModel(device[0]['mac_address'].toString(),
+            device[0]['serial_id'].toString(),
+            isConnected: device[0]['status'].toString() == 'connected'
+                ? DeviceConnectionState.connected
+                : DeviceConnectionState.disconnected);
   }
 
   Future<String> getMacAddress() async {
