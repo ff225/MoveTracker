@@ -1,23 +1,28 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mdsflutter/Mds.dart';
+import 'package:move_tracker/data/database.dart';
+import 'package:move_tracker/providers/movesense.dart';
+import 'package:workmanager/workmanager.dart';
 
 class BluetoothModel {
-  BluetoothModel(this.id, this.name,
-      {this.isConnected = DeviceConnectionState.disconnected, this.data = 0});
+  BluetoothModel(
+    this.macAddress,
+    this.serialId, {
+    this.isConnected = DeviceConnectionState.disconnected,
+  });
 
-  final String id;
-  final String name;
+  final String macAddress;
+  final String serialId;
   DeviceConnectionState isConnected;
-  dynamic data;
 }
 
 class BleNotifier extends StateNotifier<List<BluetoothModel>> {
   BleNotifier() : super([]);
 
+/*
   final _ble = FlutterReactiveBle();
   StreamSubscription<ConnectionStateUpdate>? _connection;
 
@@ -40,106 +45,75 @@ class BleNotifier extends StateNotifier<List<BluetoothModel>> {
       print("error: $p1");
     });
   }
-
+*/
   void startScan() {
-    /*
-    Mds.get("suunto://214530002602/Comm/Ble/Peers", "{}", (p0, p1) {
-      print(p0);
-      print(p1);
-    }, (p0, p1) {
-      print("error: $p0");
-      print("error: $p1");
-    });
+    state = [];
+    MdsAsync.startScan(
+      (serialId, macAddress) {
+        BluetoothModel bm =
+            BluetoothModel(macAddress!, serialId!.split(' ')[1]);
 
-     */
+        if (state.isEmpty) state = [...state, bm];
 
-    final List<BluetoothModel> discoveredDevice = [];
-    Mds.startScan((nameDevice, macAddr) {
-      if (discoveredDevice.isEmpty) {
-        discoveredDevice.add(BluetoothModel(macAddr!, nameDevice!));
-      }
-      for (var element in discoveredDevice) {
-        if (element.id != macAddr!) {
-          discoveredDevice.add(BluetoothModel(macAddr, nameDevice!));
+        if (!state.any((element) => element.macAddress == bm.macAddress)) {
+          state = [...state, bm];
         }
-      }
-      state = discoveredDevice;
-    });
-
-    Timer(
-      const Duration(seconds: 10),
-      () => Mds.stopScan(),
+      },
     );
-    /*_ble.statusStream.listen((event) {
-      state = [];
-      switch (event) {
-        case BleStatus.unknown:
-          print('unknown');
-        case BleStatus.unauthorized:
-          print('unauthorized');
-        case BleStatus.ready:
-          final searching =
-              _ble.scanForDevices(withServices: []).listen((event) {
-            //print("${event.name}, ${event.id}");
-            if (event.name != '' &&
-                discoveredDevice
-                    .where((element) => element.id == event.id)
-                    .isEmpty) {
-              discoveredDevice.add(BluetoothModel(event.id, event.name));
-            }
-          });
-          Timer(Duration(seconds: 5), () {
-            state = discoveredDevice;
-            print(state);
-            searching.cancel();
-          });
-          break;
-        default:
-          print(event);
-      }
-      ;
-    });*/
   }
 }
 
 class BleConnectNotifier extends StateNotifier<BluetoothModel> {
   BleConnectNotifier() : super(BluetoothModel('', ''));
 
-  final _ble = FlutterReactiveBle();
-  StreamSubscription<ConnectionStateUpdate>? _connection;
-
+  // TODO potrei fare una chiamata al db per inizializzare lo stato
+  //final _ble = FlutterReactiveBle();
+  //StreamSubscription<ConnectionStateUpdate>? _connection;
   void connectToDevice(BluetoothModel device) {
-    Mds.connect(device.id, (p0) {
+    Mds.connect(device.macAddress, (p0) async {
       print(p0);
       device.isConnected = DeviceConnectionState.connected;
+
+      // check che nel momento della disconnessione "improvvisa"
+      //  e poi riconnessione non scriva nuovamente informazioni presenti nel db.
+
+      // se colleghiamo un dispositivo con un serialId/macaddr diverso,
+      // prima va cancellato il contenuto.
+      await DatabaseMoveTracker.instance.insertMovesenseInfo(device);
+      // Start logging
+      Movesense().configLogger();
       state = device;
-    }, () {}, () {});
-    /*_connection = _ble
-        .connectToAdvertisingDevice(
-      id: device.id,
-      withServices: [],
-      prescanDuration: const Duration(seconds: 5),
-    )
-        .listen((event) {
-      print(event.connectionState.name);
-
-      state = BluetoothModel(device.id, device.name,
-          isConnected: event.connectionState);
-
-      if (event.connectionState == DeviceConnectionState.connected) {
-        Mds.connect(event.deviceId, (p0) {
-          print("connected");
-        }, () {}, () {});
-      }
-    });
-     */
+    }, () async {
+      device.isConnected = DeviceConnectionState.disconnected;
+      await DatabaseMoveTracker.instance.updateConnectionStatus(device);
+      state = device;
+    }, () {});
   }
 
-  void disconnectFromDevice(BluetoothModel device) {
-    Mds.disconnect(device.id);
+  Future<void> disconnectFromDevice(BluetoothModel device,
+      {bool forgetDevice = false}) async {
+    // STOP logging? Ha senso perché se dal device decidiamo di disconnetterci
+    // dal dispostivo, non ha senso tenere attivo il log e quindi consumare batteria.
+
+    await Movesense().setLogState(state: 2);
+
+    forgetDevice
+        ? await DatabaseMoveTracker.instance.deleteMovesenseInfo(device)
+        : null;
+
+    Mds.disconnect(device.macAddress);
+
+    // Delete worker
+    // TODO capire perché non funziona
+    await Workmanager().cancelByUniqueName('from-movesense-to-database');
+    await Workmanager().cancelByUniqueName('from-movesense-to-cloud');
+
     device.isConnected = DeviceConnectionState.disconnected;
+
+    await DatabaseMoveTracker.instance.updateConnectionStatus(device);
+
     state = device;
-    _connection?.cancel().whenComplete(() => BluetoothModel('', ''));
+    //_connection?.cancel().whenComplete(() => BluetoothModel('', ''));
   }
 }
 
