@@ -53,9 +53,11 @@ class BluetoothItem extends ConsumerWidget {
         icon: Icon(status.isConnected == DeviceConnectionState.disconnected
             ? Icons.bluetooth
             : Icons.bluetooth_connected),
-        label: Text(status.macAddress == device.macAddress
+        label: Text(status.isConnected
+                .name /*status.macAddress == device.macAddress
             ? status.isConnected.name
-            : DeviceConnectionState.disconnected.name),
+            : DeviceConnectionState.disconnected.name*/
+            ),
       ),
     );
   }
