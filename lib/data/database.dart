@@ -146,7 +146,7 @@ class DatabaseMoveTracker {
      */
 
     if (checkInfo.isNotEmpty) {
-      await updateConnectionStatus(device);
+      await updateInfoMovesense(device);
       return;
     }
 
@@ -163,13 +163,16 @@ class DatabaseMoveTracker {
     );
   }
 
-  // TODO riutilizzabile per cambiare frequenza logging
-  Future<void> updateConnectionStatus(BluetoothModel device) async {
+  Future<void> updateInfoMovesense(BluetoothModel device,
+      {int hzLogging = 13}) async {
     var db = await instance.database;
 
     db.update(
       Constants.tableMovesenseInfo,
-      {'status': device.isConnected.name},
+      {
+        'status': device.isConnected.name,
+        'hz_logging': hzLogging
+      },
       where: 'mac_address = ?',
       whereArgs: [device.macAddress],
     );
@@ -185,7 +188,8 @@ class DatabaseMoveTracker {
             device[0]['serial_id'].toString(),
             isConnected: device[0]['status'].toString() == 'connected'
                 ? DeviceConnectionState.connected
-                : DeviceConnectionState.disconnected);
+                : DeviceConnectionState.disconnected,
+            frequencyHz: int.parse(device[0]['hz_logging'].toString()));
   }
 
   Future<String> getMacAddress() async {
