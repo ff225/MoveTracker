@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,12 +41,17 @@ class MovesenseSettings extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Card(
-                    child: ListTile(
-                  title: const Text('Imposta frequenza di logging'),
-                  onTap: () {
-
-                  },
-                )),
+                  child: ListTile(
+                    title: const Text('Imposta frequenza di logging'),
+                    onTap: () => showDialog(
+                      barrierDismissible: false,
+                      context: context,
+                      builder: (context) => WillPopScope(
+                          onWillPop: () => Future.value(false),
+                          child: DropdownDialog(device)),
+                    ),
+                  ),
+                ),
                 Card(
                   child: ListTile(
                     title: const Text('Flush della memoria'),
@@ -53,8 +60,8 @@ class MovesenseSettings extends ConsumerWidget {
                       await Movesense().saveDataToDatabase();
                       await DatabaseMoveTracker.instance.sendToCloud(
                           table: Constants.tableMovesenseAccelerometer);
-                      await DatabaseMoveTracker.instance
-                          .sendToCloud(table: Constants.tableDeviceAccelerometer);
+                      await DatabaseMoveTracker.instance.sendToCloud(
+                          table: Constants.tableDeviceAccelerometer);
                     },
                     trailing: const Icon(Icons.save_alt),
                   ),
@@ -109,6 +116,92 @@ class MovesenseSettings extends ConsumerWidget {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class DropdownDialog extends StatefulWidget {
+  DropdownDialog(this.device, {super.key});
+
+  BluetoothModel device;
+
+  @override
+  State<DropdownDialog> createState() {
+    return _DropdownDialogState();
+  }
+}
+
+class _DropdownDialogState extends State<DropdownDialog> {
+  int selectedValue = 13;
+  bool isEnabled = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const Text('Configura la frequenza di logging.'),
+            DropdownButton<int>(
+              value: selectedValue,
+              items: const <DropdownMenuItem<int>>[
+                DropdownMenuItem<int>(
+                  value: 13,
+                  child: Text('13'),
+                ),
+                DropdownMenuItem<int>(
+                  value: 26,
+                  child: Text('26'),
+                ),
+                DropdownMenuItem<int>(
+                  value: 52,
+                  child: Text('52'),
+                ),
+              ],
+              onChanged: (int? value) {
+                log('value: $value');
+                setState(() {
+                  selectedValue = value!;
+                  log('selectedValue: $selectedValue');
+                });
+              },
+            ),
+            const SizedBox(height: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: isEnabled
+                      ? () {
+                          Navigator.pop(context);
+                        }
+                      : null,
+                  child: const Text('Close'),
+                ),
+                TextButton(
+                  onPressed: isEnabled
+                      ? () async {
+                          setState(() {
+                            isEnabled = false;
+                          });
+                          await DatabaseMoveTracker.instance
+                              .updateInfoMovesense(widget.device,
+                                  hzLogging: selectedValue);
+                          await Movesense()
+                              .configLogger()
+                              .then((value) => Navigator.pop(context));
+                        }
+                      : null,
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
