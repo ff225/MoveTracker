@@ -13,11 +13,13 @@ class BluetoothModel {
     this.macAddress,
     this.serialId, {
     this.isConnected = DeviceConnectionState.disconnected,
+    this.frequencyHz = 13,
   });
 
   final String macAddress;
   final String serialId;
   DeviceConnectionState isConnected;
+  int frequencyHz;
 }
 
 class BleNotifier extends StateNotifier<List<BluetoothModel>> {
@@ -67,7 +69,6 @@ class BleNotifier extends StateNotifier<List<BluetoothModel>> {
 class BleConnectNotifier extends StateNotifier<BluetoothModel> {
   BleConnectNotifier() : super(BluetoothModel('', ''));
 
-  // TODO potrei fare una chiamata al db per inizializzare lo stato
   //final _ble = FlutterReactiveBle();
   //StreamSubscription<ConnectionStateUpdate>? _connection;
   void connectToDevice(BluetoothModel device) {
@@ -86,7 +87,8 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
       state = device;
     }, () async {
       device.isConnected = DeviceConnectionState.disconnected;
-      await DatabaseMoveTracker.instance.updateConnectionStatus(device);
+      await DatabaseMoveTracker.instance
+          .updateInfoMovesense(device, hzLogging: device.frequencyHz);
       state = device;
     }, () {});
   }
@@ -101,18 +103,17 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
     Mds.disconnect(device.macAddress);
 
     // Delete worker
-    // TODO capire perché non funziona
     await Workmanager().cancelByUniqueName('from-movesense-to-database');
     await Workmanager().cancelByUniqueName('from-movesense-to-cloud');
 
     device.isConnected = DeviceConnectionState.disconnected;
     forgetDevice
         ? await DatabaseMoveTracker.instance.deleteMovesenseInfo(device)
-        : await DatabaseMoveTracker.instance.updateConnectionStatus(device);
+        : await DatabaseMoveTracker.instance
+            .updateInfoMovesense(device, hzLogging: device.frequencyHz);
 
     log('forgetDevice? $forgetDevice');
     state = forgetDevice ? BluetoothModel('', '') : device;
-    //_connection?.cancel().whenComplete(() => BluetoothModel('', ''));
   }
 
   Future<void> config() async {
