@@ -1,15 +1,65 @@
-import 'package:flutter/material.dart';
-import 'package:move_tracker/screens/home_page.dart';
+import 'dart:async';
 
-void main() {
-  runApp(const MyApp());
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:move_tracker/constants.dart';
+import 'package:move_tracker/data/database.dart';
+import 'package:move_tracker/providers/ble_notifier.dart';
+import 'package:move_tracker/providers/movesense.dart';
+import 'package:move_tracker/screens/home_page.dart';
+import 'package:move_tracker/services/accelerometer_service.dart';
+import 'package:workmanager/workmanager.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await AccelerometerService().initService();
+  await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+
+  Workmanager().registerPeriodicTask(
+    'from-device-to-cloud',
+    'send-device-data',
+    existingWorkPolicy: ExistingWorkPolicy.append,
+    constraints: Constraints(
+      networkType: NetworkType.connected,
+      //requiresDeviceIdle: true,
+      //requiresBatteryNotLow: true,
+    ),
+    initialDelay: const Duration(minutes: 10),
+    frequency: const Duration(minutes: 15),
+  );
+
+  Workmanager().registerPeriodicTask(
+    'from-device-to-database',
+    'save-device-data',
+    existingWorkPolicy: ExistingWorkPolicy.append,
+/*    constraints: Constraints(
+      networkType: NetworkType.connected,
+    ),*/
+    initialDelay: const Duration(minutes: 5),
+    frequency: const Duration(minutes: 15),
+  );
+  Workmanager().registerPeriodicTask(
+    'clear-database',
+    'clear-database',
+    frequency: const Duration(hours: 1),
+    initialDelay: const Duration(minutes: 30),
+    existingWorkPolicy: ExistingWorkPolicy.replace,
+  );
+
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(bleConnectProvider.notifier).config();
     return MaterialApp(
       title: 'Move Tracker',
       theme: ThemeData(
@@ -34,4 +84,80 @@ class MyApp extends StatelessWidget {
       home: const HomePageScreen('Move Tracker'),
     );
   }
+}
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask(
+    (taskName, inputData) async {
+      switch (taskName) {
+        case 'save-device-data':
+          AccelerometerService().service.invoke('saveDataToDB');
+          break;
+        case 'send-device-data':
+          AccelerometerService().service.invoke('sendToCloud');
+          break;
+        case 'save-movesense-data':
+          await Movesense().saveDataToDatabase();
+          /*
+          //Stop logging
+          await MdsAsync.put("suunto://214530002554/Mem/DataLogger/State/",
+              '''{"newState": 2}''');
+
+          // Get entry id
+          var entryId = await MdsAsync.get(
+              "suunto://214530002554/Mem/Logbook/Entries/", "");
+
+          log("id: ${entryId['elements'][0]['Id']}");
+          var id = entryId['elements'][0]['Id'];
+          var values = await MdsAsync.get(
+              "suunto://MDS/Logbook/214530002554/byId/$id/Data", "");
+          List<double> xValues = [];
+          List<double> yValues = [];
+          List<double> zValues = [];
+          for (var accData in values['Meas']['Acc']) {
+            for (var value in accData['ArrayAcc']) {
+              log("x: ${double.parse(value['x'].toString())}, y: ${value['y']}, z: ${value['z']}");
+
+              xValues.add(double.parse(value['x'].toString()));
+              yValues.add(double.parse(value['y'].toString()));
+              zValues.add(double.parse(value['z'].toString()));
+            }
+          }
+          log("x: ${xValues.length},y: ${yValues.length},z: ${zValues.length} ");
+
+          // Store values on db
+          log('store data to ${Constants.tableMovesenseAccelerometer}...');
+          await DatabaseMoveTracker.instance.insert(
+              xAxis: xValues,
+              yAxis: yValues,
+              zAxis: zValues,
+              table: Constants.tableMovesenseAccelerometer);
+
+          // Delete entry
+          await MdsAsync.del(
+            "suunto://214530002554/Mem/Logbook/Entries/",
+            "",
+          );
+
+          // Restart Logging
+          await MdsAsync.put("suunto://214530002554/Mem/DataLogger/State/",
+              '''{"newState": 3}''');
+
+           */
+          break;
+        case 'send-movesense-data':
+          await DatabaseMoveTracker.instance
+              .sendToCloud(table: Constants.tableMovesenseAccelerometer);
+          break;
+        case 'clear-database':
+          await DatabaseMoveTracker.instance.deleteAccelerometerTable(
+              table: Constants.tableDeviceAccelerometer);
+          await DatabaseMoveTracker.instance.deleteAccelerometerTable(
+              table: Constants.tableMovesenseAccelerometer);
+          break;
+      }
+      return Future.value(true);
+    },
+  );
 }

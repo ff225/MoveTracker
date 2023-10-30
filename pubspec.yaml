@@ -37,6 +37,15 @@ dependencies:
   cupertino_icons: ^1.0.2
   sensors_plus: ^3.0.3
   flutter_riverpod: ^2.4.1
+  flutter_reactive_ble: ^5.2.0
+  permission_handler: ^11.0.0
+  workmanager: ^0.5.1
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  firebase_core: ^2.19.0
+  flutter_background_service: 5.0.1
+  cloud_firestore: ^4.12.0
+  mdsflutter: ^2.0.0
 
 dev_dependencies:
   flutter_test:

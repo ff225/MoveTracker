@@ -14,11 +14,12 @@ class LogScreen extends StatefulWidget {
 class _LogScreenState extends State<LogScreen> {
   List<double> _accelerometerValues = [];
   String _string = 'Start';
+  final sensor = AccelerometerSensor();
 
   @override
   void initState() {
     super.initState();
-    hwSensor.listen().onData(
+    sensor.listen().onData(
           (data) => setState(
             () {
               _accelerometerValues = [data.x, data.y, data.z];
@@ -30,7 +31,7 @@ class _LogScreenState extends State<LogScreen> {
   @override
   void dispose() {
     super.dispose();
-    hwSensor.cancel();
+    sensor.cancel();
   }
 
   Widget _iosSettingsUI() {
