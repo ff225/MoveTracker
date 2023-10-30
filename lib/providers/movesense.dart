@@ -15,7 +15,7 @@ class Movesense {
 
   // TODO potrei tornare un'informazione per gestire il caso in cui ci siano errori in fase di configurazione.
   Future<void> configLogger({int hz = 13}) async {
-    var serialId = await DatabaseMoveTracker.instance.getSerialId();
+    var device = await DatabaseMoveTracker.instance.getDevice();
 
     // alla prima connessione/riconnessione è necessario fare il flush della memoria
     await saveDataToDatabase();
@@ -35,7 +35,7 @@ class Movesense {
                                 "dataEntries": {
                                     "dataEntry": [
                                         {
-                                            "path": "/Meas/Acc/$hz"
+                                            "path": "/Meas/Acc/${device.frequencyHz}"
                                         }
                                     ]
                                 }
@@ -43,8 +43,7 @@ class Movesense {
                         }''';
 
     var response = await MdsAsync.put(
-            Mds.createRequestUri(serialId, '/Mem/DataLogger/Config/'),
-            jsonConfig)
+            Mds.createRequestUri(device.serialId, '/Mem/DataLogger/Config/'), jsonConfig)
         .then<String>((_) => setLogState(state: 3), onError: (error, _) {
       MdsError status = error as MdsError;
       log('error: ${status.error}');
