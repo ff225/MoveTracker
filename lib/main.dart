@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:move_tracker/constants.dart';
 import 'package:move_tracker/data/database.dart';
+import 'package:move_tracker/providers/ble_notifier.dart';
 import 'package:move_tracker/providers/movesense.dart';
 import 'package:move_tracker/screens/home_page.dart';
 import 'package:move_tracker/services/accelerometer_service.dart';
@@ -53,11 +54,12 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(bleConnectProvider.notifier).config();
     return MaterialApp(
       title: 'Move Tracker',
       theme: ThemeData(
