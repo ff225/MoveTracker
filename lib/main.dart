@@ -13,6 +13,7 @@ import 'package:workmanager/workmanager.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await DatabaseMoveTracker.instance.init();
   await AccelerometerService().initService();
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
 

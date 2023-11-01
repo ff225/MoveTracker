@@ -3,9 +3,13 @@ import 'dart:developer';
 import 'dart:ui';
 
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:mdsflutter/Mds.dart';
 import 'package:move_tracker/constants.dart';
 import 'package:move_tracker/data/database.dart';
 import 'package:move_tracker/providers/accelerometer_sensor.dart';
+import 'package:move_tracker/providers/ble_notifier.dart';
+import 'package:move_tracker/providers/movesense.dart';
 
 class AccelerometerService {
   final service = FlutterBackgroundService();
@@ -14,6 +18,60 @@ class AccelerometerService {
   static Future<void> onStart(ServiceInstance serviceInstance) async {
     DartPluginRegistrant.ensureInitialized();
     final hwSensor = AccelerometerSensor();
+
+    log('Accelerometer service started');
+    BluetoothModel device = await DatabaseMoveTracker.instance.getDevice();
+
+    if (device.serialId.isNotEmpty) {
+      Mds.connect(device.macAddress, (p0) {}, () {}, () {});
+    }
+
+    StreamSubscription x =
+        MdsAsync.subscribe('suunto://MDS/ConnectingDevices', "{}")
+            .listen((event) async {
+      device = await DatabaseMoveTracker.instance.getDevice();
+      log('message: $event');
+      log('state: ${event['Body']['State']}');
+      if (event['Body']['State'] == 'Disconnected' &&
+          device.macAddress.isNotEmpty) {
+        device.isConnected = DeviceConnectionState.disconnected;
+        await DatabaseMoveTracker.instance.updateInfoMovesense(device);
+        // TODO notifiche
+      } else if (event['Body']['State'] == 'FinishConnect' &&
+          device.macAddress.isNotEmpty) {
+        log('inside FinishConnect');
+        device.isConnected = DeviceConnectionState.connected;
+        await DatabaseMoveTracker.instance.updateInfoMovesense(device);
+        Movesense().configLogger();
+      }
+    });
+
+    serviceInstance.on('startSub').listen((event) {
+      log('restart subscription');
+      x = MdsAsync.subscribe('suunto://MDS/ConnectingDevices', "{}")
+          .listen((event) async {
+        device = await DatabaseMoveTracker.instance.getDevice();
+        log('message: $event');
+        log('state: ${event['Body']['State']}');
+        if (event['Body']['State'] == 'Disconnected' &&
+            device.macAddress.isNotEmpty) {
+          device.isConnected = DeviceConnectionState.disconnected;
+          await DatabaseMoveTracker.instance.updateInfoMovesense(device);
+          // TODO notifiche
+        } else if (event['Body']['State'] == 'FinishConnect' &&
+            device.macAddress.isNotEmpty) {
+          log('inside FinishConnect');
+          device.isConnected = DeviceConnectionState.connected;
+          await DatabaseMoveTracker.instance.updateInfoMovesense(device);
+          Movesense().configLogger();
+        }
+      });
+    });
+
+    serviceInstance.on('stopSub').listen((event) {
+      log('stop subscription');
+      x.cancel();
+    });
 
     serviceInstance.on('sendToCloud').listen((event) async {
       // Non è necessario che sia await perché i dati sono sul db

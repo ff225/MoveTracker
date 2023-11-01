@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mdsflutter/Mds.dart';
 import 'package:move_tracker/data/database.dart';
 import 'package:move_tracker/providers/movesense.dart';
+import 'package:move_tracker/services/accelerometer_service.dart';
 import 'package:workmanager/workmanager.dart';
 
 class BluetoothModel {
@@ -72,20 +73,29 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
   //final _ble = FlutterReactiveBle();
   //StreamSubscription<ConnectionStateUpdate>? _connection;
   void connectToDevice(BluetoothModel device) {
+    AccelerometerService().service.invoke('stopSub');
     Mds.connect(device.macAddress, (p0) async {
-      print(p0);
+      //print(p0);
+      //AccelerometerService().service.invoke('cancelSub');
       device.isConnected = DeviceConnectionState.connected;
-
+      //AccelerometerService().service.invoke('stopService');
       // check che nel momento della disconnessione "improvvisa"
       //  e poi riconnessione non scriva nuovamente informazioni presenti nel db.
 
       // se colleghiamo un dispositivo con un serialId/macaddr diverso,
       // prima va cancellato il contenuto.
+
       await DatabaseMoveTracker.instance.insertMovesenseInfo(device);
       // Start logging
-      Movesense().configLogger();
+      //log('inside Connect');
+      await Movesense().configLogger();
+
+      AccelerometerService().service.invoke('startSub');
+
+      //AccelerometerService().service.invoke('restartSub');
       state = device;
     }, () async {
+      AccelerometerService().service.invoke('stopSub');
       device.isConnected = DeviceConnectionState.disconnected;
       await DatabaseMoveTracker.instance
           .updateInfoMovesense(device, hzLogging: device.frequencyHz);
@@ -97,6 +107,7 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
       {bool forgetDevice = false}) async {
     // STOP logging? Ha senso perché se dal device decidiamo di disconnetterci
     // dal dispostivo, non ha senso tenere attivo il log e quindi consumare batteria.
+    AccelerometerService().service.invoke('stopSub');
 
     await Movesense().setLogState(state: 2);
 
