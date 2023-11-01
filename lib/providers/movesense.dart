@@ -9,11 +9,11 @@ class Movesense {
   Future<void> setTime() async {
     var serialId = await DatabaseMoveTracker.instance.getSerialId();
     log(DateTime.timestamp().toUtc().microsecondsSinceEpoch.toString());
+
     MdsAsync.put(Mds.createRequestUri(serialId, '/Time/'),
         '''{"value": ${DateTime.timestamp().toUtc().microsecondsSinceEpoch}}''');
   }
 
-  // TODO potrei tornare un'informazione per gestire il caso in cui ci siano errori in fase di configurazione.
   Future<void> configLogger({int hz = 13}) async {
     var device = await DatabaseMoveTracker.instance.getDevice();
 
@@ -43,7 +43,8 @@ class Movesense {
                         }''';
 
     var response = await MdsAsync.put(
-            Mds.createRequestUri(device.serialId, '/Mem/DataLogger/Config/'), jsonConfig)
+            Mds.createRequestUri(device.serialId, '/Mem/DataLogger/Config/'),
+            jsonConfig)
         .then<String>((_) => setLogState(state: 3), onError: (error, _) {
       MdsError status = error as MdsError;
       log('error: ${status.error}');
@@ -140,7 +141,7 @@ class Movesense {
           .then((values) {
         for (var accData in values['Meas']['Acc']) {
           for (var value in accData['ArrayAcc']) {
-            log("x: ${double.parse(value['x'].toString())}, y: ${value['y']}, z: ${value['z']}");
+            //log("x: ${double.parse(value['x'].toString())}, y: ${value['y']}, z: ${value['z']}");
 
             xValues.add(double.parse(value['x'].toString()));
             yValues.add(double.parse(value['y'].toString()));
