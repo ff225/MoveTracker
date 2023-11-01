@@ -8,7 +8,6 @@ import 'package:move_tracker/data/database.dart';
 import 'package:move_tracker/providers/ble_notifier.dart';
 import 'package:move_tracker/providers/movesense.dart';
 import 'package:move_tracker/services/accelerometer_service.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class MovesenseSettings extends ConsumerWidget {
   const MovesenseSettings({super.key});
@@ -19,8 +18,7 @@ class MovesenseSettings extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Movesense ${device.serialId}'),
-        actions: [
-          // TODO rimuovere dopo test
+        /*actions: [
           if (device.isConnected == DeviceConnectionState.connected)
             IconButton(
                 onPressed: () async {
@@ -29,12 +27,12 @@ class MovesenseSettings extends ConsumerWidget {
                     Permission.bluetoothConnect,
                     Permission.location
                   ].request();
-                  ref
-                      .read(bleConnectProvider.notifier)
-                      .disconnectFromDevice(device);
+                  //ref
+                  //  .read(bleConnectProvider.notifier)
+                  //.disconnectFromDevice(device);
                 },
                 icon: const Icon(Icons.bluetooth_disabled)),
-        ],
+        ],*/
       ),
       body: device.isConnected == DeviceConnectionState.connected
           ? Column(
