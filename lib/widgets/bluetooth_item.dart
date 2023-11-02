@@ -41,7 +41,9 @@ class BluetoothItem extends ConsumerWidget {
       trailing: TextButton.icon(
         onPressed: () {
           if (status.isConnected == DeviceConnectionState.disconnected) {
-            ref.read(bleConnectProvider.notifier).connectToDevice(device);
+            ref
+                .read(bleConnectProvider.notifier)
+                .connectToDevice(device, init: true);
           } else {
             ref.read(bleConnectProvider.notifier).disconnectFromDevice(device);
           }

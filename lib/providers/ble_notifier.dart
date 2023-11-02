@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mdsflutter/Mds.dart';
 import 'package:move_tracker/data/database.dart';
 import 'package:move_tracker/providers/movesense.dart';
-import 'package:move_tracker/services/accelerometer_service.dart';
 import 'package:workmanager/workmanager.dart';
 
 class BluetoothModel {
@@ -72,30 +71,29 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
 
   //final _ble = FlutterReactiveBle();
   //StreamSubscription<ConnectionStateUpdate>? _connection;
-  void connectToDevice(BluetoothModel device) {
-    AccelerometerService().service.invoke('stopSub');
+  void connectToDevice(BluetoothModel device, {bool init = false}) {
+    //AccelerometerService().service.invoke('stopSub');
+    //firstConnection = init;
     Mds.connect(device.macAddress, (p0) async {
+      log('first connection? ${init.toString()}');
+      //AccelerometerService().service.invoke('stopSub');
+      //AccelerometerService().service.invoke('startSub');
       //print(p0);
       //AccelerometerService().service.invoke('cancelSub');
-      device.isConnected = DeviceConnectionState.connected;
-      //AccelerometerService().service.invoke('stopService');
-      // check che nel momento della disconnessione "improvvisa"
-      //  e poi riconnessione non scriva nuovamente informazioni presenti nel db.
+      if (init) {
+        device.isConnected = DeviceConnectionState.connected;
+        await DatabaseMoveTracker.instance.insertMovesenseInfo(device);
+        await Movesense().configLogger();
+      }
 
-      // se colleghiamo un dispositivo con un serialId/macaddr diverso,
-      // prima va cancellato il contenuto.
-
-      await DatabaseMoveTracker.instance.insertMovesenseInfo(device);
       // Start logging
       //log('inside Connect');
-      await Movesense().configLogger();
-
-      AccelerometerService().service.invoke('startSub');
 
       //AccelerometerService().service.invoke('restartSub');
       state = device;
     }, () async {
-      AccelerometerService().service.invoke('stopSub');
+      //AccelerometerService().service.invoke('stopSub');
+      //AccelerometerService().service.invoke('startSub');
       device.isConnected = DeviceConnectionState.disconnected;
       await DatabaseMoveTracker.instance
           .updateInfoMovesense(device, hzLogging: device.frequencyHz);
@@ -107,7 +105,7 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
       {bool forgetDevice = false}) async {
     // STOP logging? Ha senso perché se dal device decidiamo di disconnetterci
     // dal dispostivo, non ha senso tenere attivo il log e quindi consumare batteria.
-    AccelerometerService().service.invoke('stopSub');
+    //AccelerometerService().service.invoke('stopSub');
 
     await Movesense().setLogState(state: 2);
 
@@ -124,6 +122,7 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
             .updateInfoMovesense(device, hzLogging: device.frequencyHz);
 
     log('forgetDevice? $forgetDevice');
+    //forgetDevice ? AccelerometerService().service.invoke('stopSub') : null;
     state = forgetDevice ? BluetoothModel('', '') : device;
   }
 
