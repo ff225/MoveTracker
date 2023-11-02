@@ -71,5 +71,7 @@ flutter {
 }
 
 dependencies {
+    implementation 'androidx.window:window:1.1.0'
+    implementation 'androidx.window:window-java:1.1.0'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
