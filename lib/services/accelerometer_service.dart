@@ -10,6 +10,7 @@ import 'package:move_tracker/data/database.dart';
 import 'package:move_tracker/providers/accelerometer_sensor.dart';
 import 'package:move_tracker/providers/ble_notifier.dart';
 import 'package:move_tracker/providers/movesense.dart';
+import 'package:workmanager/workmanager.dart';
 
 class AccelerometerService {
   final service = FlutterBackgroundService();
@@ -37,12 +38,18 @@ class AccelerometerService {
           device.macAddress.isNotEmpty) {
         device.isConnected = DeviceConnectionState.disconnected;
         await DatabaseMoveTracker.instance.updateInfoMovesense(device);
-        // TODO notifiche
+        Workmanager().registerPeriodicTask(
+          'notifica',
+          'device-disconnected',
+          existingWorkPolicy: ExistingWorkPolicy.replace,
+          frequency: const Duration(minutes: 15),
+        );
       } else if (event['Body']['State'] == 'FinishConnect' &&
           device.macAddress.isNotEmpty) {
         log('inside FinishConnect');
         device.isConnected = DeviceConnectionState.connected;
         await DatabaseMoveTracker.instance.updateInfoMovesense(device);
+        Workmanager().cancelByUniqueName('notifica');
         Movesense().configLogger();
       }
     });
@@ -115,13 +122,16 @@ class AccelerometerService {
   }
 
   Future<void> initService() async {
-    service.configure(
+    await service.configure(
       iosConfiguration: IosConfiguration(autoStart: true),
       androidConfiguration: AndroidConfiguration(
-          autoStart: true,
-          onStart: onStart,
-          autoStartOnBoot: true,
-          isForegroundMode: true),
+        autoStart: true,
+        onStart: onStart,
+        autoStartOnBoot: true,
+        isForegroundMode: true,
+        //notificationChannelId: Constants.notificationChannelId,
+        //foregroundServiceNotificationId: Constants.notificationId,
+      ),
     );
   }
 }
