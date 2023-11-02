@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:ui';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:mdsflutter/Mds.dart';
@@ -23,12 +24,13 @@ class AccelerometerService {
     BluetoothModel device = await DatabaseMoveTracker.instance.getDevice();
 
     if (device.serialId.isNotEmpty) {
-      Mds.connect(device.macAddress, (p0) {}, () {}, () {});
+      Mds.connect(device.macAddress, (p0) {
+        log('from service inside Connect');
+      }, () {}, () {});
     }
 
-    StreamSubscription x =
-        MdsAsync.subscribe('suunto://MDS/ConnectingDevices', "{}")
-            .listen((event) async {
+    MdsAsync.subscribe('suunto://MDS/ConnectingDevices', "{}")
+        .listen((event) async {
       device = await DatabaseMoveTracker.instance.getDevice();
       log('message: $event');
       log('state: ${event['Body']['State']}');
@@ -45,7 +47,7 @@ class AccelerometerService {
         Movesense().configLogger();
       }
     });
-
+/*
     serviceInstance.on('startSub').listen((event) {
       log('restart subscription');
       x = MdsAsync.subscribe('suunto://MDS/ConnectingDevices', "{}")
@@ -68,11 +70,11 @@ class AccelerometerService {
       });
     });
 
-    serviceInstance.on('stopSub').listen((event) {
+    serviceInstance.on('stopSub').listen((event) async {
       log('stop subscription');
-      x.cancel();
+      await x.cancel();
     });
-
+*/
     serviceInstance.on('sendToCloud').listen((event) async {
       // Non è necessario che sia await perché i dati sono sul db
       log('send data from ${Constants.tableDeviceAccelerometer} to cloud');
