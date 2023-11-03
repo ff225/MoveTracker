@@ -30,6 +30,17 @@ Future<void> main() async {
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
 
   Workmanager().registerPeriodicTask(
+    'from-logbook-to-cloud',
+    'send-logbook-data',
+    existingWorkPolicy: ExistingWorkPolicy.append,
+    constraints: Constraints(
+      networkType: NetworkType.connected,
+      requiresDeviceIdle: true,
+      requiresBatteryNotLow: true,
+    ),
+  );
+
+  Workmanager().registerPeriodicTask(
     'from-device-to-cloud',
     'send-device-data',
     existingWorkPolicy: ExistingWorkPolicy.append,
@@ -118,10 +129,12 @@ void callbackDispatcher() {
               .sendToCloud(table: Constants.tableMovesenseAccelerometer);
           break;
         case 'clear-database':
-          await DatabaseMoveTracker.instance.deleteAccelerometerTable(
+          await DatabaseMoveTracker.instance.deleteInfoSentToCloud(
               table: Constants.tableDeviceAccelerometer);
-          await DatabaseMoveTracker.instance.deleteAccelerometerTable(
+          await DatabaseMoveTracker.instance.deleteInfoSentToCloud(
               table: Constants.tableMovesenseAccelerometer);
+          await DatabaseMoveTracker.instance
+              .deleteInfoSentToCloud(table: Constants.tableLogbook);
           break;
         case 'device-disconnected':
           AndroidNotificationDetails androidNotificationDetails =
@@ -137,6 +150,10 @@ void callbackDispatcher() {
               NotificationDetails(android: androidNotificationDetails);
           flutterLocalNotificationsPlugin.show(0, "Dispositivo disconnesso",
               ('Il sensore non è più conesso..'), notificationDetails);
+          break;
+
+        case 'send-logbook-data':
+          await DatabaseMoveTracker.instance.sendLogbookToCloud();
           break;
       }
 
