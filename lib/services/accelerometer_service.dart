@@ -39,17 +39,17 @@ class AccelerometerService {
         device.isConnected = DeviceConnectionState.disconnected;
         await DatabaseMoveTracker.instance.updateInfoMovesense(device);
         Workmanager().registerPeriodicTask(
-          'notifica',
+          'notification-device-disconnected',
           'device-disconnected',
-          existingWorkPolicy: ExistingWorkPolicy.replace,
-          frequency: const Duration(minutes: 15),
+          existingWorkPolicy: ExistingWorkPolicy.keep,
+          frequency: const Duration(hours: 1),
         );
       } else if (event['Body']['State'] == 'FinishConnect' &&
           device.macAddress.isNotEmpty) {
         log('inside FinishConnect');
         device.isConnected = DeviceConnectionState.connected;
         await DatabaseMoveTracker.instance.updateInfoMovesense(device);
-        Workmanager().cancelByUniqueName('notifica');
+        Workmanager().cancelByUniqueName('notification-device-disconnected');
         Movesense().configLogger();
       }
     });
@@ -65,7 +65,7 @@ class AccelerometerService {
             device.macAddress.isNotEmpty) {
           device.isConnected = DeviceConnectionState.disconnected;
           await DatabaseMoveTracker.instance.updateInfoMovesense(device);
-          // TODO notifiche
+
         } else if (event['Body']['State'] == 'FinishConnect' &&
             device.macAddress.isNotEmpty) {
           log('inside FinishConnect');
