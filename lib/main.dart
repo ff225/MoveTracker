@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -9,22 +10,49 @@ import 'package:move_tracker/providers/ble_notifier.dart';
 import 'package:move_tracker/providers/movesense.dart';
 import 'package:move_tracker/screens/home_page.dart';
 import 'package:move_tracker/services/accelerometer_service.dart';
+import 'package:move_tracker/services/notification_helper.dart';
 import 'package:workmanager/workmanager.dart';
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-const AndroidInitializationSettings initializationSettingsAndroid =
-    AndroidInitializationSettings('@drawable/launch_background');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  flutterLocalNotificationsPlugin.initialize(
-      const InitializationSettings(android: initializationSettingsAndroid));
-  flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.requestNotificationsPermission();
 
+  if (Platform.isAndroid) {
+    NotificationHelper()
+        .flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+  } else if (Platform.isIOS) {
+    NotificationHelper()
+        .flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions();
+  }
+  /*
+  const AndroidNotificationDetails androidNotificationDetails =
+      AndroidNotificationDetails('Diario', 'Diario',
+          channelDescription: 'Gestione delle notifiche relative al diario');
+
+  NotificationHelper().scheduledNotification(
+      2,
+      'Move Tracker',
+      'Aggiungi una nota al diario',
+      const NotificationDetails(android: androidNotificationDetails),
+      hour: 17,
+      minutes: 45);
+
+  / *
+  const NotificationDetails notificationDetails =
+      NotificationDetails(android: androidNotificationDetails);
+  await flutterLocalNotificationsPlugin.periodicallyShow(
+      0,
+      'Move Tracker',
+      'Aggiungi una nota al diario',
+      RepeatInterval.everyMinute,
+      notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle);
+*/
   await DatabaseMoveTracker.instance.init();
   await AccelerometerService().initService();
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
@@ -35,7 +63,7 @@ Future<void> main() async {
     existingWorkPolicy: ExistingWorkPolicy.append,
     constraints: Constraints(
       networkType: NetworkType.connected,
-      requiresDeviceIdle: true,
+      //requiresDeviceIdle: true,
       requiresBatteryNotLow: true,
     ),
   );
@@ -129,8 +157,8 @@ void callbackDispatcher() {
               .sendToCloud(table: Constants.tableMovesenseAccelerometer);
           break;
         case 'clear-database':
-          await DatabaseMoveTracker.instance.deleteInfoSentToCloud(
-              table: Constants.tableDeviceAccelerometer);
+          await DatabaseMoveTracker.instance
+              .deleteInfoSentToCloud(table: Constants.tableDeviceAccelerometer);
           await DatabaseMoveTracker.instance.deleteInfoSentToCloud(
               table: Constants.tableMovesenseAccelerometer);
           await DatabaseMoveTracker.instance
@@ -146,10 +174,20 @@ void callbackDispatcher() {
             importance: Importance.max,
             priority: Priority.high,
           );
+          await NotificationHelper().showNotification(
+              1,
+              'Move Tracker',
+              'Il sensore non è più conesso',
+              NotificationDetails(android: androidNotificationDetails));
+
+          /*
+
           NotificationDetails notificationDetails =
               NotificationDetails(android: androidNotificationDetails);
           flutterLocalNotificationsPlugin.show(0, "Dispositivo disconnesso",
               ('Il sensore non è più conesso..'), notificationDetails);
+
+           */
           break;
 
         case 'send-logbook-data':
