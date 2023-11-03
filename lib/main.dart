@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:move_tracker/constants.dart';
 import 'package:move_tracker/data/database.dart';
@@ -10,8 +11,19 @@ import 'package:move_tracker/screens/home_page.dart';
 import 'package:move_tracker/services/accelerometer_service.dart';
 import 'package:workmanager/workmanager.dart';
 
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings('@drawable/launch_background');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  flutterLocalNotificationsPlugin.initialize(
+      const InitializationSettings(android: initializationSettingsAndroid));
+  flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestNotificationsPermission();
 
   await DatabaseMoveTracker.instance.init();
   await AccelerometerService().initService();
@@ -100,52 +112,6 @@ void callbackDispatcher() {
           break;
         case 'save-movesense-data':
           await Movesense().saveDataToDatabase();
-          /*
-          //Stop logging
-          await MdsAsync.put("suunto://214530002554/Mem/DataLogger/State/",
-              '''{"newState": 2}''');
-
-          // Get entry id
-          var entryId = await MdsAsync.get(
-              "suunto://214530002554/Mem/Logbook/Entries/", "");
-
-          log("id: ${entryId['elements'][0]['Id']}");
-          var id = entryId['elements'][0]['Id'];
-          var values = await MdsAsync.get(
-              "suunto://MDS/Logbook/214530002554/byId/$id/Data", "");
-          List<double> xValues = [];
-          List<double> yValues = [];
-          List<double> zValues = [];
-          for (var accData in values['Meas']['Acc']) {
-            for (var value in accData['ArrayAcc']) {
-              log("x: ${double.parse(value['x'].toString())}, y: ${value['y']}, z: ${value['z']}");
-
-              xValues.add(double.parse(value['x'].toString()));
-              yValues.add(double.parse(value['y'].toString()));
-              zValues.add(double.parse(value['z'].toString()));
-            }
-          }
-          log("x: ${xValues.length},y: ${yValues.length},z: ${zValues.length} ");
-
-          // Store values on db
-          log('store data to ${Constants.tableMovesenseAccelerometer}...');
-          await DatabaseMoveTracker.instance.insert(
-              xAxis: xValues,
-              yAxis: yValues,
-              zAxis: zValues,
-              table: Constants.tableMovesenseAccelerometer);
-
-          // Delete entry
-          await MdsAsync.del(
-            "suunto://214530002554/Mem/Logbook/Entries/",
-            "",
-          );
-
-          // Restart Logging
-          await MdsAsync.put("suunto://214530002554/Mem/DataLogger/State/",
-              '''{"newState": 3}''');
-
-           */
           break;
         case 'send-movesense-data':
           await DatabaseMoveTracker.instance
@@ -157,7 +123,23 @@ void callbackDispatcher() {
           await DatabaseMoveTracker.instance.deleteAccelerometerTable(
               table: Constants.tableMovesenseAccelerometer);
           break;
+        case 'device-disconnected':
+          AndroidNotificationDetails androidNotificationDetails =
+              AndroidNotificationDetails(
+            Constants.notificationChannelId,
+            Constants.notificationChannelId,
+            channelDescription:
+                "Notifiche per informare l'utente sullo stato della connessione al sensore.",
+            importance: Importance.max,
+            priority: Priority.high,
+          );
+          NotificationDetails notificationDetails =
+              NotificationDetails(android: androidNotificationDetails);
+          flutterLocalNotificationsPlugin.show(0, "Dispositivo disconnesso",
+              ('Il sensore non è più conesso..'), notificationDetails);
+          break;
       }
+
       return Future.value(true);
     },
   );
