@@ -92,6 +92,7 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
       //AccelerometerService().service.invoke('restartSub');
       state = device;
     }, () async {
+      init = false;
       //AccelerometerService().service.invoke('stopSub');
       //AccelerometerService().service.invoke('startSub');
       device.isConnected = DeviceConnectionState.disconnected;
@@ -122,7 +123,9 @@ class BleConnectNotifier extends StateNotifier<BluetoothModel> {
             .updateInfoMovesense(device, hzLogging: device.frequencyHz);
 
     log('forgetDevice? $forgetDevice');
-    //forgetDevice ? AccelerometerService().service.invoke('stopSub') : null;
+    forgetDevice
+        ? Workmanager().cancelByUniqueName('notification-device-disconnected')
+        : null;
     state = forgetDevice ? BluetoothModel('', '') : device;
   }
 
