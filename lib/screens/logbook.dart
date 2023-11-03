@@ -38,8 +38,8 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                   key: Key(data[index].timestamp.toIso8601String()),
                   background: Container(color: Colors.red),
                   onDismissed: (direction) {
-                    setState(() async {
-                      await DatabaseMoveTracker.instance
+                    setState(() {
+                      DatabaseMoveTracker.instance
                           .removeLogbookEntry(data[index]);
                       data.removeAt(index);
                     });
