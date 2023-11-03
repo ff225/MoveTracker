@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:move_tracker/data/models/accelerometer_data.dart';
+import 'package:move_tracker/data/models/logbook_entry.dart';
 import 'package:move_tracker/providers/ble_notifier.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart' as sql;
@@ -51,6 +52,12 @@ class DatabaseMoveTracker {
           'hz_logging INTEGER DEFAULT 13 NOT NULL,'
           'status TEXT NOT NULL'
           ')');
+      await db.execute('CREATE TABLE ${Constants.tableLogbook} ('
+          'timestamp TEXT NOT NULL,'
+          'title TEXT NOT NULL,'
+          'note TEXT NOT NULL,'
+          'is_sent INTEGER NOT NULL'
+          ')');
     }, version: 1);
   }
 
@@ -91,7 +98,7 @@ class DatabaseMoveTracker {
     });
   }
 
-  Future<void> updateAccelerometerInfo(String timestamp,
+  Future<void> updateInfo(String timestamp,
       {required String table}) async {
     var db = await instance.database;
 
@@ -99,7 +106,7 @@ class DatabaseMoveTracker {
         where: 'timestamp = ?', whereArgs: [timestamp]);
   }
 
-  Future<void> deleteAccelerometerTable({required String table}) async {
+  Future<void> deleteInfoSentToCloud({required String table}) async {
     var db = await instance.database;
 
     await db.delete(table, where: 'is_sent = ?', whereArgs: [1]);
@@ -121,7 +128,7 @@ class DatabaseMoveTracker {
           'z': element.z,
         },
       ).whenComplete(
-        () async => await DatabaseMoveTracker.instance.updateAccelerometerInfo(
+        () async => await DatabaseMoveTracker.instance.updateInfo(
           element.timestamp.toIso8601String(),
           table: table,
         ),
@@ -169,10 +176,7 @@ class DatabaseMoveTracker {
 
     db.update(
       Constants.tableMovesenseInfo,
-      {
-        'status': device.isConnected.name,
-        'hz_logging': hzLogging
-      },
+      {'status': device.isConnected.name, 'hz_logging': hzLogging},
       where: 'mac_address = ?',
       whereArgs: [device.macAddress],
     );
@@ -215,4 +219,59 @@ class DatabaseMoveTracker {
     await db.delete(Constants.tableMovesenseInfo,
         where: 'serial_id = ?', whereArgs: [device.serialId]);
   }
+
+  Future<void> insertLogbookEntry(LogbookEntry entry) async {
+    var db = await instance.database;
+
+    log('add new entry in ${Constants.tableLogbook}');
+    await db.insert(Constants.tableLogbook, entry.toMap());
+  }
+
+  Future<void> removeLogbookEntry(LogbookEntry entry) async {
+    var db = await instance.database;
+
+    log('delete entry in ${Constants.tableLogbook}');
+    await db.delete(Constants.tableLogbook,
+        where: 'timestamp = ?', whereArgs: [entry.timestamp.toIso8601String()]);
+  }
+
+  Future<List<LogbookEntry>> getAllLogbookEntry({sendToCloud = false}) async {
+    var db = await instance.database;
+
+    log('get all entry in ${Constants.tableLogbook}');
+
+    var data = sendToCloud
+        ? await db
+            .query(Constants.tableLogbook, where: 'isSent = ?', whereArgs: [0])
+        : await db.query(Constants.tableLogbook);
+
+    return List.generate(data.length, (index) {
+      return LogbookEntry(DateTime.parse(data[index]['timestamp'].toString()),
+          data[index]['title'].toString(), data[index]['note'].toString());
+    });
+  }
+
+  Future<void> sendLogbookToCloud() async {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    var db = FirebaseFirestore.instance;
+    final list = await DatabaseMoveTracker.instance
+        .getAllLogbookEntry(sendToCloud: true);
+
+    for (final element in list) {
+      await db
+          .collection(Constants.tableLogbook)
+          .doc(element.timestamp.toIso8601String())
+          .set(
+        {'title': element.title, 'note': element.note},
+      ).whenComplete(
+        () async => await DatabaseMoveTracker.instance.updateInfo(
+          element.timestamp.toIso8601String(),
+          table: Constants.tableLogbook,
+        ),
+      );
+    }
+  }
+
 }
