@@ -98,8 +98,7 @@ class DatabaseMoveTracker {
     });
   }
 
-  Future<void> updateInfo(String timestamp,
-      {required String table}) async {
+  Future<void> updateInfo(String timestamp, {required String table}) async {
     var db = await instance.database;
 
     await db.update(table, {'is_sent': 1},
@@ -242,7 +241,7 @@ class DatabaseMoveTracker {
 
     var data = sendToCloud
         ? await db
-            .query(Constants.tableLogbook, where: 'isSent = ?', whereArgs: [0])
+            .query(Constants.tableLogbook, where: 'is_sent = ?', whereArgs: [0])
         : await db.query(Constants.tableLogbook);
 
     return List.generate(data.length, (index) {
@@ -273,5 +272,4 @@ class DatabaseMoveTracker {
       );
     }
   }
-
 }
