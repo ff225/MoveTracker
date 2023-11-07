@@ -4,4 +4,5 @@ class Constants {
   static String tableMovesenseInfo = 'movesense_info';
   static String notificationChannelId = 'Gestione connessione';
   static int notificationId = 888;
+  static String tableLogbook = 'logbook_data';
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:move_tracker/screens/log.dart';
+import 'package:move_tracker/screens/logbook.dart';
 import 'package:move_tracker/screens/settings.dart';
-import 'package:move_tracker/services/accelerometer_service.dart';
-import 'package:workmanager/workmanager.dart';
 
 class HomePageScreen extends StatelessWidget {
   const HomePageScreen(this.title, {super.key});
@@ -20,6 +19,9 @@ class HomePageScreen extends StatelessWidget {
           builder: (context) => const LogScreen(),
         ),
       );
+
+  void _moveToLogbook(BuildContext ctx) => Navigator.of(ctx)
+      .push(MaterialPageRoute(builder: (context) => const LogbookScreen()));
 
   @override
   Widget build(BuildContext context) {
@@ -39,17 +41,7 @@ class HomePageScreen extends StatelessWidget {
           children: [
             ElevatedButton(
               child: const Text('Diario'),
-              onPressed: () async {
-                Workmanager()
-                    .registerOneOffTask('readMovesense', 'read-from-movesense');
-                if (await AccelerometerService().service.isRunning()) {
-                  print('send-value in Diario');
-
-                  Workmanager().registerOneOffTask('showData', 'send-value');
-                } else {
-                  AccelerometerService().service.startService();
-                }
-              },
+              onPressed: () => _moveToLogbook(context),
             ),
             const SizedBox(
               height: 20,
