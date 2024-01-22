@@ -48,6 +48,7 @@ dependencies:
   mdsflutter: ^2.0.0
   flutter_local_notifications: ^16.1.0
   flutter_timezone: ^1.0.8
+  firebase_app_installations: ^0.2.4+8
 
 dev_dependencies:
   flutter_test:
