@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_installations/firebase_app_installations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:move_tracker/data/models/accelerometer_data.dart';
@@ -116,11 +117,23 @@ class DatabaseMoveTracker {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     var db = FirebaseFirestore.instance;
+    String id = await FirebaseInstallations.instance.getId();
+    log('sendToCloud: $id');
     final list = await DatabaseMoveTracker.instance.getDataFromDB(table: table);
     log('$table, list length: ${list.length}');
 
     for (final element in list) {
-      await db.collection(table).doc(element.timestamp.toIso8601String()).set(
+      // (AccelerometerData)
+      //  -> (ID_UTENTE)
+      //    -> (DeviceData/Movesense)
+      //      -> (timestamp)
+      //        -> (Valori)
+      await db
+          .collection(Constants.firebaseCollection)
+          .doc(id)
+          .collection(table)
+          .doc(element.timestamp.toIso8601String())
+          .set(
         {
           'x': element.x,
           'y': element.y,
@@ -255,11 +268,15 @@ class DatabaseMoveTracker {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     var db = FirebaseFirestore.instance;
+    String id = await FirebaseInstallations.instance.getId();
+    log('sendLogbookToCloud: $id');
     final list = await DatabaseMoveTracker.instance
         .getAllLogbookEntry(sendToCloud: true);
 
     for (final element in list) {
       await db
+          .collection(Constants.firebaseCollection)
+          .doc(id)
           .collection(Constants.tableLogbook)
           .doc(element.timestamp.toIso8601String())
           .set(
